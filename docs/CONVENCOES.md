@@ -3,6 +3,14 @@
 Regras práticas que valem para todo o código e documentação. O que é decisão
 arquitetural com contexto/consequência fica nas ADRs (`docs/dominio/00-...`).
 
+## Documentação
+
+- **Um `README.md` por diretório de topo**, não por subpasta:
+  `docker/README.md`, `src/README.md`, `tests/README.md`, `docs/dominio/README.md`.
+  O README cobre tudo abaixo dele. Evita ter mais README do que código.
+- Decisão arquitetural com contexto/consequência → ADR em `docs/dominio/00-...`.
+  Regra prática curta → este arquivo.
+
 ## Arquivos
 
 - **Encoding: UTF-8** (sem BOM), em **todos** os arquivos. Sem ISO-8859-1.

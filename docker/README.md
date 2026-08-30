@@ -7,7 +7,7 @@ setup do M0.1). Não reaproveita nem interfere em nada que já exista na máquin
 
 | Serviço | Imagem | Papel | Porta no host |
 |---------|--------|-------|---------------|
-| `php`   | build de [`php/Dockerfile`](php/README.md) | PHP 8.3 + PHP-FPM: executa o código | — (só interna, `:9000`) |
+| `php`   | build de `php/Dockerfile` | PHP 8.3 + PHP-FPM: executa o código | — (só interna, `:9000`) |
 | `nginx` | `nginx:1.27-alpine` | servidor web; repassa `.php` para o `php` via FastCGI | `8080` → `80` |
 | `db`    | `mysql:8.4` | banco de dados | `33061` → `3306` |
 
@@ -173,17 +173,87 @@ a pasta real do host.
 > **bind mount** = pasta do host montada no container (código-fonte).
 > **volume nomeado** = área gerenciada pelo Docker (dados do banco).
 
+---
+
+## Imagem PHP — `php/Dockerfile`
+
+Receita da imagem que executa o código: **PHP 8.3 + PHP-FPM** sobre Alpine, com
+as extensões do domínio, Composer embutido e usuário não-root.
+
+### Conceitos
+
+- **Imagem × container.** O `Dockerfile` é a receita de uma *imagem*. Dela o
+  Docker cria *containers* (instâncias em execução).
+- **PHP-FPM.** O nginx não executa PHP; repassa a requisição para o PHP-FPM na
+  porta `9000` via FastCGI. Por isso a base é `php:8.3-fpm-*`, não `cli`/`apache`.
+- **Alpine.** Linux minúsculo (~10 MB). Usa `apk`, não `apt`.
+- **Camadas.** Cada instrução vira uma camada em cache; o que muda pouco vem antes.
+- **Instrução do Dockerfile × comando de shell.** `FROM`, `RUN`, `COPY`, `ARG`,
+  `WORKDIR`, `USER` são instruções do Docker — **uma por linha**. `&&` e `\` só
+  valem **dentro** de um `RUN`; o `\` fica no fim de toda linha do `RUN` menos a
+  última.
+
+### Linha a linha
+
+| Instrução | O que faz |
+|-----------|-----------|
+| `FROM php:8.3-fpm-alpine` | base: PHP 8.3 (exige a modelagem — `enum`, `readonly`) + FPM + Alpine |
+| `ARG UID=1000` / `ARG GID=1000` | variáveis **de build**; o compose passa os valores em `build.args` |
+| `RUN apk add --no-cache icu-dev && docker-php-ext-install pdo_mysql intl opcache` | `icu-dev` = lib exigida para compilar `intl`. Extensões: **`pdo_mysql`** (driver PDO/MySQL — base da persistência, ADR-011), **`intl`** (`\NumberFormatter`, usado por `Money` e `symfony/uid`), **`opcache`** (cache de bytecode) |
+| `COPY --from=composer:2 /usr/bin/composer /usr/bin/composer` | *multi-stage*: copia só o binário do Composer da imagem oficial, versão fixa |
+| `RUN addgroup -g ${GID} app && adduser -u ${UID} -G app -s /bin/sh -D app` | cria usuário `app` com o **mesmo UID/GID do host** → arquivos do bind mount ficam seus, não do `root` |
+| `WORKDIR /var/www` | diretório padrão; é onde o compose monta o código |
+| `USER app` | daqui em diante o container roda como não-root |
+
+> A imagem oficial do PHP hoje instala o compilador (`gcc`, `make`…) só para
+> compilar as extensões e o **remove no fim** — no build aparece
+> `Purging gcc, make...`. Em imagens antigas isso era manual (`$PHPIZE_DEPS`).
+
+Verificação:
+```bash
+docker compose run --rm php sh -c 'php -v && php -m | grep -E "pdo_mysql|intl" && id'
+```
+
+---
+
+## Nginx — `nginx/default.conf`
+
+O nginx é o porteiro: recebe **toda** requisição de `localhost:8080` e decide —
+arquivo estático em `public/` → serve do disco; qualquer outra coisa → repassa
+para o PHP-FPM via FastCGI.
+
+```
+navegador ──:8080──▶ nginx ──FastCGI php:9000──▶ php-fpm ──▶ public/index.php
+```
+
+### `default.conf` — linha a linha
+
+| Trecho | Função |
+|--------|--------|
+| `server { }` | um *virtual host*. Montado em `/etc/nginx/conf.d/default.conf` pelo compose |
+| `listen 80` | porta **dentro** do container (o `8080` do host está no compose) |
+| `server_name _` | curinga: responde a qualquer Host |
+| `root /var/www/public` | pasta exposta à web — **`public/`**, não a raiz. `src/`, `vendor/`, `.env` ficam fora do alcance (*front controller pattern*) |
+| `index index.php` | arquivo padrão quando a URL aponta para um diretório |
+| `location / { try_files $uri $uri/ /index.php?$query_string; }` | tenta arquivo real → diretório → senão manda tudo para `index.php`. É como `GET /health`, `POST /orders` etc. chegam ao kernel |
+| `location ~ \.php$ { fastcgi_pass php:9000; ... }` | executa PHP. `fastcgi_pass php:9000` (nome resolvido pela rede do compose); `SCRIPT_FILENAME $realpath_root$fastcgi_script_name` diz **qual arquivo** rodar; `include fastcgi_params` traz os parâmetros padrão |
+| `location ~ /\.(?!well-known) { deny all; }` | bloqueia `.env`, `.git` etc.; libera `.well-known` (Let's Encrypt) |
+
+Notas:
+- `nginx -t` isolado falha com `host not found in upstream "php"` — esperado fora
+  do compose (não há serviço `php` para resolver). Dentro de `up` funciona.
+- Config de dev. Produção pediria: `gzip`, cache de estáticos, headers de
+  segurança, HTTPS, `client_max_body_size`, timeouts de FastCGI.
+
+---
+
 ## Estrutura
 
 ```
 docker/
-├── README.md          (este arquivo)
-├── php/
-│   ├── Dockerfile
-│   └── README.md       explicação linha a linha da imagem PHP
-└── nginx/
-    ├── default.conf
-    └── README.md       explicação do virtual host / FastCGI
+├── README.md          (este arquivo — cobre Dockerfile, nginx.conf e compose)
+├── php/Dockerfile
+└── nginx/default.conf
 
 docker-compose.yml      (raiz) — orquestra php + nginx + db
 .env / .env.example     (raiz) — variáveis lidas pelo compose
