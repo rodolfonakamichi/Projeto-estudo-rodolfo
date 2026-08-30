@@ -23,3 +23,8 @@ Thumbs.db
 # Build
 /build/
 /dist/
+/vendor/
+/.env
+/.phpunit.result.cache
+/.php-cs-fixer.cache
+
