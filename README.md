@@ -4,8 +4,9 @@ Projeto de estudo: construir, **passo a passo**, uma plataforma de comandas que
 começa em alimentação e é projetada para atender bares, eventos, clubes, hotéis
 e salões sem reescrever o núcleo.
 
-**Status atual:** modelagem de domínio concluída. Implementação na fundação
-(milestone M0 — ver documento 07).
+**Status atual:** modelagem de domínio concluída. **M0 (fundação) concluído** —
+Docker, kernel HTTP próprio (PSR-7/15), container, CLI, Phinx, CI. Próximo: M1
+(identidade e multi-tenant). Ver documento 07.
 
 ---
 

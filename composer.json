@@ -1,5 +1,6 @@
 {
-  "name": "roodolfonakamichi/comandas-universal",
+  "name": "rodolfonakamichi/comandas-universal",
+  "description": "Plataforma Universal de Comandas — projeto de estudo (PHP 8.3, sem framework).",
   "type": "project",
   "license": "proprietary",
   "require": {

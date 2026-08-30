@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, intl
+          coverage: none
+
+      - name: Validar composer.json
+        run: composer validate --strict
+
+      - name: Cache do vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependências
+        run: composer install --no-interaction --no-progress
+
+      - name: Encoding UTF-8
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            enc=$(file -b --mime-encoding "$f")
+            case "$enc" in
+              utf-8|us-ascii|binary) ;;
+              *) echo "não-UTF-8 ($enc): $f"; fail=1 ;;
+            esac
+          done < <(git ls-files)
+          exit $fail
+
+      - name: PHP CS Fixer
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit
