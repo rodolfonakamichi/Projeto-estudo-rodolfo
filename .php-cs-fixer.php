@@ -5,7 +5,8 @@ declare(strict_types=1);
 $finder = PhpCsFixer\Finder::create()
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
-    ->append([__FILE__]);
+    ->in(__DIR__ . '/config')
+    ->append([__FILE__, __DIR__ . '/bin/console' ]);
 
 return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)

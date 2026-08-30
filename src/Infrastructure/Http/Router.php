@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http;
 
 use FastRoute\Dispatcher;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -13,9 +16,14 @@ final class Router implements RequestHandlerInterface
 {
     public function __construct(
         private readonly Dispatcher $dispatcher,
+        private readonly ContainerInterface $container,
     ) {
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $routeInfo = $this->dispatcher->dispatch(
@@ -31,8 +39,11 @@ final class Router implements RequestHandlerInterface
     }
 
     /**
-     * @param  class-string<RequestHandlerInterface> $handlerClass
-     * @param  array<string, string>                 $vars
+     * @param class-string<RequestHandlerInterface> $handlerClass
+     * @param array<string, string>                 $vars
+     *
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     private function runHandler(string $handlerClass, array $vars, ServerRequestInterface $request): ResponseInterface
     {
@@ -40,7 +51,11 @@ final class Router implements RequestHandlerInterface
             $request = $request->withAttribute($key, $value);
         }
 
-        $handler = new $handlerClass();
+        $handler = $this->container->get($handlerClass);
+
+        if (! $handler instanceof RequestHandlerInterface) {
+            throw new \RuntimeException("{$handlerClass} não é um RequestHandlerInterface.");
+        }
 
         return $handler->handle($request);
     }
