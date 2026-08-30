@@ -13,7 +13,7 @@ e salões sem reescrever o núcleo.
 Leia **nesta ordem** — cada documento assume o anterior.
 
 ### 1. Pesquisa de mercado e visão de produto
-[`plataforma-universal-de-comandas.md`](plataforma-universal-de-comandas.md)
+[`docs/plataforma-universal-de-comandas.md`](docs/plataforma-universal-de-comandas.md)
 
 O "porquê" do projeto: o que o mercado já tem, onde está a oportunidade, os
 segmentos-alvo, os riscos e o MVP recomendado. É a fonte de tudo que vem depois.

@@ -1,7 +1,7 @@
 # Documentação de Domínio — Plataforma Universal de Comandas
 
 Esta pasta contém a modelagem que **precede a implementação**, conforme a
-seção 61 do documento de pesquisa (`../../plataforma-universal-de-comandas.md`).
+seção 61 do documento de pesquisa (`../plataforma-universal-de-comandas.md`).
 
 ## Ordem de leitura
 
