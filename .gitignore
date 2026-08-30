@@ -1,0 +1,25 @@
+# IDE - PhpStorm / IntelliJ
+/.idea/
+
+# Dependências
+/vendor/
+/node_modules/
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Logs e cache
+*.log
+/var/
+/cache/
+/tmp/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Build
+/build/
+/dist/
