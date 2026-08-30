@@ -6,3 +6,4 @@ parameters:
         - config
         - public
         - bin
+        - database

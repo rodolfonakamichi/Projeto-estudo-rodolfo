@@ -6,7 +6,12 @@ $finder = PhpCsFixer\Finder::create()
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
     ->in(__DIR__ . '/config')
-    ->append([__FILE__, __DIR__ . '/bin/console' ]);
+    ->append([
+        __FILE__,
+        __DIR__ . '/phinx.php',
+        __DIR__ . '/public/index.php',
+        __DIR__ . '/bin/console',
+    ]);
 
 return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)

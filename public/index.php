@@ -8,10 +8,8 @@ use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreator;
 use Psr\Container\ContainerInterface;
 
-require __DIR__ . '/../vendor/autoload.php';
-
 /** @var ContainerInterface $container */
-$container = require __DIR__ . '/../config/container.php';
+$container = require __DIR__ . '/../config/bootstrap.php';
 
 $psr17 = new Psr17Factory();
 $request = (new ServerRequestCreator($psr17, $psr17, $psr17, $psr17))->fromGlobals();
