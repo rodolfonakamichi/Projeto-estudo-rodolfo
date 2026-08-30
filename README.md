@@ -4,7 +4,8 @@ Projeto de estudo: construir, **passo a passo**, uma plataforma de comandas que
 começa em alimentação e é projetada para atender bares, eventos, clubes, hotéis
 e salões sem reescrever o núcleo.
 
-**Status atual:** modelagem de domínio concluída. Sem código de aplicação ainda.
+**Status atual:** modelagem de domínio concluída. Implementação na fundação
+(milestone M0 — ver documento 07).
 
 ---
 
@@ -37,19 +38,83 @@ recomenda:
 | 07 | Roadmap do MVP | Fase 1 fatiada em entregas (M0–M11) com critério de aceite |
 
 ### 3. Implementação
-Ainda não iniciada. O ponto de partida é o milestone **M0** do documento 07.
+Em andamento no milestone **M0** (fundação). Convenções de código em
+[`docs/CONVENCOES.md`](docs/CONVENCOES.md).
 
 ---
 
 ## Stack
 
 PHP 8.3 **sem framework** · Composer (PSR-4) · MySQL 8 (PDO) · Phinx (migrations)
-· PHPUnit · (KDS em tempo real: SSE no MVP)
+· PHPUnit · php-cs-fixer · PHPStan · (KDS em tempo real: SSE no MVP)
 
 Arquitetura em camadas montada à mão:
 `Domain` (regra pura) → `Application` (casos de uso) → `Infrastructure`
 (banco via PDO, gateways) → `Presentation` (HTTP, API, WebSocket/SSE).
 Detalhes nas ADR-002 e ADR-011 (documento 00).
+
+---
+
+## Desenvolvimento
+
+Tudo roda em Docker isolado deste projeto (ver [`docker/README.md`](docker/README.md)).
+Nada é instalado no host.
+
+### Subir / derrubar o ambiente
+
+```bash
+cp .env.example .env                       # 1ª vez
+docker compose build php                   # 1ª vez, ou quando o Dockerfile mudar
+docker compose run --rm php composer install
+docker compose up -d                       # sobe php + nginx + db
+docker compose down                        # derruba (mantém o banco)
+docker compose down -v                     # derruba e apaga o banco
+```
+
+App em `http://localhost:8080` · MySQL do host em `127.0.0.1:33061`.
+
+### Atalho: rodar comandos no container
+
+```bash
+docker compose exec php <comando>          # roda dentro do container PHP
+```
+
+### Testes (PHPUnit)
+
+```bash
+docker compose exec php vendor/bin/phpunit
+docker compose exec php vendor/bin/phpunit --filter test_allocate
+docker compose exec php vendor/bin/phpunit --testdox      # saída legível
+```
+
+### Estilo de código (php-cs-fixer)
+
+```bash
+docker compose exec php vendor/bin/php-cs-fixer fix --dry-run --diff   # só mostra
+docker compose exec php vendor/bin/php-cs-fixer fix                    # aplica
+```
+
+### Análise estática (PHPStan)
+
+```bash
+docker compose exec php vendor/bin/phpstan analyse
+```
+
+### Dependências
+
+```bash
+docker compose exec php composer require <pacote>          # produção
+docker compose exec php composer require --dev <pacote>    # dev/CI
+docker compose exec php composer install                   # após git pull
+```
+
+### Antes de commitar
+
+```bash
+docker compose exec php vendor/bin/php-cs-fixer fix
+docker compose exec php vendor/bin/phpstan analyse
+docker compose exec php vendor/bin/phpunit
+```
 
 ---
 
@@ -63,5 +128,4 @@ Divergência entre documento e código é tratada como bug.
 
 ## Branches
 
-- `main` — base estável
-- `minha-feature` — trabalho em andamento
+Trabalho direto na `main` (projeto de estudo solo).

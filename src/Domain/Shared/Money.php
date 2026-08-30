@@ -9,7 +9,7 @@ final readonly class Money
     private function __construct(
         private int    $cents,
         private string $currency,
-      ) {
+    ) {
     }
 
     public static function fromCents(int $cents, string $currency = 'BRL'): self
@@ -56,11 +56,18 @@ final readonly class Money
     {
         if ($this->currency !== $other->currency) {
             throw new \InvalidArgumentException(
-                "Moedas diferentes: {$this->currency} e {$other->currency}."
+                "Moedas diferentes: {$this->currency} e {$other->currency}.",
             );
         }
     }
 
+    /**
+     * Divide o valor em partes proporcionais aos pesos, sem perder nem criar
+     * centavo — a soma das partes é sempre igual ao total.
+     *
+     * @param  list<int> $ratios pesos (ex.: [1,1,1] = 3 partes iguais; [70,30])
+     * @return list<self>
+     */
     public function allocate(array $ratios): array
     {
         if ($ratios === []) {
