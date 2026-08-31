@@ -129,10 +129,10 @@ collation `utf8mb4_0900_ai_ci` (MySQL) / `utf8mb4_unicode_ci` (MariaDB).
 
 ## ADR-004 — Multiempresa: banco único com coluna discriminadora
 
-**Contexto.** Seção 42: uma empresa tem várias unidades; precisa isolar dados.
+**Contexto.** Seção 42: uma empresa tem várias filiais; precisa isolar dados.
 
 **Decisão.** *Single database, shared schema*. **Toda** tabela de negócio tem
-`company_id` (e, quando fizer sentido, `unit_id`). Sem ORM não há *global scope*
+`company_id` (e, quando fizer sentido, `branch_id`). Sem ORM não há *global scope*
 automático: um objeto imutável `CompanyContext`, resolvido pelo middleware de
 autenticação, é injetado em **todo** repositório, e **todo** SQL de negócio
 carrega `WHERE company_id = :company_id`. Uma classe base de repositório e um
@@ -164,7 +164,7 @@ num VO `Domain\Shared\Ulid` para o domínio não depender do pacote.
 
 **Consequências.** `CHAR(26)` ocupa mais que `BIGINT`. Aceitável. Números
 "amigáveis" para humanos (comanda #1234 do dia) são um **campo separado**
-(`display_number`), sequencial por unidade/dia, não a PK.
+(`display_number`), sequencial por filial/dia, não a PK.
 
 ---
 
@@ -317,3 +317,4 @@ motivo — aí a migration tool do framework provavelmente substitui o Phinx.
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | ADR-011: projeto deixa de usar Laravel — PHP puro + PDO, migrations com Phinx. Reescrita da ADR-002 (camadas sem framework), ADR-004 (isolamento de company sem global scope), ADR-005 (`symfony/uid`), ADR-010 (SSE no lugar de Reverb). |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |

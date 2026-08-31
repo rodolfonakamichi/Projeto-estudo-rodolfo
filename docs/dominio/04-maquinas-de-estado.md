@@ -142,7 +142,7 @@ tela do cliente dizendo "já paguei" **não** confirma nada.
 
 | Origem | Ação | Quem | Guarda | Destino | Evento |
 |--------|------|------|--------|---------|--------|
-| — | abrir caixa | CASHIER, MANAGER | operador sem outra sessão `OPEN` na unidade; informa `opening_amount` | `OPEN` | `CashRegisterOpened` |
+| — | abrir caixa | CASHIER, MANAGER | operador sem outra sessão `OPEN` na filial; informa `opening_amount` | `OPEN` | `CashRegisterOpened` |
 | OPEN | sangria (retirada) | CASHIER + motivo | `amount ≤ saldo em dinheiro` | `OPEN` | `CashWithdrawal` |
 | OPEN | suprimento (reforço) | CASHIER, MANAGER | — | `OPEN` | `CashDeposit` |
 | OPEN | fechar caixa | CASHIER, MANAGER | nenhuma comanda com pagamento `PENDING` nesse caixa | `CLOSED` | `CashRegisterClosed` |
@@ -209,3 +209,4 @@ como ADR.
 |------|---------|
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Libs alternativas trocadas para opções sem framework (ADR-011). |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |

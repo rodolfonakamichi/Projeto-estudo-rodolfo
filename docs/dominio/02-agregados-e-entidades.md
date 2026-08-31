@@ -11,16 +11,16 @@
 
 | Agregado (raiz) | Contém | Invariante principal |
 |-----------------|--------|----------------------|
-| `Company` | `Unit[]`, `Capability[]` | Slug único; ao menos 1 unidade ativa. |
-| `User` | `Role[]` (por unidade) | E-mail único por empresa. |
+| `Company` | `Branch[]`, `Capability[]` | Slug único; ao menos 1 filial ativa. |
+| `User` | `Role[]` (por filial) | E-mail único por empresa. |
 | `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa OU preço próprio; soma de min/max dos grupos coerente. |
-| `Category` | — | Nome único por unidade. |
+| `Category` | — | Nome único por filial. |
 | `Location` | — | Código de QR único por empresa. |
 | `Command` | `CommandItem[]`, `Discount[]`, `BillSplit?` | Total = Σ itens − descontos; só fecha se saldo = 0; item não some, é cancelado. |
 | `Order` | `OrderItem[]` | Pertence a 1 comanda aberta; não pode ser enviado vazio. |
 | `ProductionTicket` | `ProductionTicketItem[]` | Roteado para exatamente 1 estação; segue a máquina de estados. |
 | `Payment` | — | Valor > 0; confirma só via confirmação da fonte (webhook PIX / operador). |
-| `CashRegister` | `CashMovement[]` | Só 1 sessão aberta por operador/unidade; fecha com contagem informada. |
+| `CashRegister` | `CashMovement[]` | Só 1 sessão aberta por operador/filial; fecha com contagem informada. |
 | `Stock` | `StockMovement[]` | Saldo = Σ movimentos; não fica negativo sem flag `allow_negative`. |
 | `DomainEvent` | — | Imutável; `id` (ULID) único; `published_at` nulo até despacho. |
 
@@ -37,14 +37,14 @@
 
 ```mermaid
 erDiagram
-    COMPANY ||--o{ UNIT : possui
+    COMPANY ||--o{ BRANCH : possui
     COMPANY ||--o{ COMPANY_CAPABILITY : habilita
     COMPANY ||--o{ USER : possui
-    UNIT   ||--o{ CATEGORY : tem
-    UNIT   ||--o{ PRODUCT : tem
-    UNIT   ||--o{ LOCATION : tem
-    UNIT   ||--o{ STATION : tem
-    UNIT   ||--o{ PAYMENT_METHOD : configura
+    BRANCH   ||--o{ CATEGORY : tem
+    BRANCH   ||--o{ PRODUCT : tem
+    BRANCH   ||--o{ LOCATION : tem
+    BRANCH   ||--o{ STATION : tem
+    BRANCH   ||--o{ PAYMENT_METHOD : configura
 
     USER ||--o{ USER_ROLE : recebe
     ROLE ||--o{ ROLE_PERMISSION : agrupa
@@ -80,7 +80,7 @@ erDiagram
     PAYMENT ||--o| CASH_MOVEMENT : "gera (se dinheiro)"
     PAYMENT_METHOD ||--o{ PAYMENT : classifica
 
-    UNIT ||--o{ STOCK : mantém
+    BRANCH ||--o{ STOCK : mantém
     STOCK ||--o{ STOCK_MOVEMENT : histórico
     RECIPE_ITEM }o--|| STOCK : consome
 
@@ -98,8 +98,8 @@ erDiagram
 
 **Estado:**
 ```
-id (ULID)              company_id, unit_id
-display_number         # 42  (sequencial por unidade/dia)
+id (ULID)              company_id, branch_id
+display_number         # 42  (sequencial por filial/dia)
 bind_type              MESA | BALCAO | CLIENTE | QUARTO | PULSEIRA | EVENTO | VEICULO | SERVICO | AVULSO
 bind_ref               ULID da Location (se MESA) | id do Customer | código da pulseira | texto livre
 customer_id?           opcional
@@ -131,7 +131,7 @@ totals (calculado)     subtotal, discount_total, service_fee?, total, paid_total
 ### 3.2 `Order` (pedido)
 
 ```
-id, company_id, unit_id, command_id
+id, company_id, branch_id, command_id
 channel          TABLE | COUNTER | QR | DELIVERY | WHATSAPP | KIOSK | API
 placed_by        user_id (ou null se cliente via QR)
 status           CREATED | SENT | PARTIALLY_READY | READY | DELIVERED | CANCELLED
@@ -150,7 +150,7 @@ created_at, sent_at
 ### 3.3 `ProductionTicket` (o que o KDS mostra)
 
 ```
-id, company_id, unit_id, order_id, station_id
+id, company_id, branch_id, order_id, station_id
 status        RECEIVED | IN_PREPARATION | READY | DELIVERED | CANCELLED
 items[]       ProductionTicketItem { order_item_id, product_name, qty, modifiers_text, notes }
 received_at, started_at, ready_at, delivered_at   # base das métricas da seção 15
@@ -162,7 +162,7 @@ só vê o seu.
 ### 3.4 `Payment`
 
 ```
-id, company_id, unit_id, command_id, cash_register_id?
+id, company_id, branch_id, command_id, cash_register_id?
 method_id           FK PaymentMethod
 kind                CASH | PIX | CARD_DEBIT | CARD_CREDIT | VOUCHER | OTHER
 amount              BIGINT centavos
@@ -178,7 +178,7 @@ pagou".
 ### 3.5 `CashRegister` (sessão de caixa)
 
 ```
-id, company_id, unit_id, operator_id
+id, company_id, branch_id, operator_id
 status              OPEN | CLOSED
 opened_at, opening_amount
 closed_at?, counted_amount?, expected_amount?, difference?
@@ -229,3 +229,4 @@ registre como novo ADR revisando a ADR-002.
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Nota de estudo §5 reescrita para PDO + mapeador (ADR-011), sem Eloquent. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |

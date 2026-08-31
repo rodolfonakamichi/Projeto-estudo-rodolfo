@@ -2,7 +2,7 @@
 
 > Modelo: **RBAC** (papel → permissões) + **ABAC leve** para desconto (faixa por
 > papel). Papéis e permissões são **por empresa**; um papel pode ser atribuído
-> **por unidade** (`user_roles.unit_id`). Ver seções 31–32 da pesquisa.
+> **por filial** (`user_roles.branch_id`). Ver seções 31–32 da pesquisa.
 
 ---
 
@@ -10,15 +10,15 @@
 
 | Código | Descrição | Escopo típico |
 |--------|-----------|---------------|
-| `OWNER` | Dono. Tudo, inclusive faturamento da plataforma. | Company |
-| `ADMIN` | Administra configuração, catálogo, usuários. | Company |
-| `MANAGER` | Gerente de unidade: autoriza desconto/estorno, fecha caixa, cancela. | Unidade |
-| `CASHIER` | Caixa: pagamentos, sessão de caixa, fechar comanda. | Unidade |
-| `WAITER` | Garçom: abrir comanda, lançar item, enviar pedido, entregar. | Unidade |
+| `OWNER` | Dono. Tudo, inclusive faturamento da plataforma. | Empresa |
+| `ADMIN` | Administra configuração, catálogo, usuários. | Empresa |
+| `MANAGER` | Gerente de filial: autoriza desconto/estorno, fecha caixa, cancela. | Filial |
+| `CASHIER` | Caixa: pagamentos, sessão de caixa, fechar comanda. | Filial |
+| `WAITER` | Garçom: abrir comanda, lançar item, enviar pedido, entregar. | Filial |
 | `KITCHEN` | Cozinha: opera KDS da(s) estação(ões) de cozinha. | Estação |
 | `BAR` | Bar: opera KDS do bar. | Estação |
-| `STOCK` | Estoque: entradas, ajustes, fichas técnicas. | Unidade |
-| `AUDITOR` | Só leitura: relatórios, timeline, logs. | Company |
+| `STOCK` | Estoque: entradas, ajustes, fichas técnicas. | Filial |
+| `AUDITOR` | Só leitura: relatórios, timeline, logs. | Empresa |
 
 Papéis são **cumulativos**: um usuário pode ser `WAITER` + `CASHIER`.
 
@@ -79,7 +79,7 @@ Formato `contexto.recurso.ação`.
 | Permissão | O que libera |
 |-----------|--------------|
 | `admin.user.manage` | CRUD de usuários e papéis |
-| `admin.unit.manage` | CRUD de unidades |
+| `admin.branch.manage` | CRUD de filiais |
 | `admin.capability.manage` | Ligar/desligar capabilities |
 | `report.sales.view` | Relatórios de venda, ticket médio, margem |
 | `report.audit.view` | Timeline e logs de auditoria |
@@ -124,7 +124,7 @@ Formato `contexto.recurso.ação`.
 | stock.adjust | ● | ● | ● | — | — | — | — | ▲ | — |
 | stock.recipe.manage | ● | ● | ● | — | — | — | — | ● | — |
 | admin.user.manage | ● | ● | — | — | — | — | — | — | — |
-| admin.unit.manage | ● | ● | — | — | — | — | — | — | — |
+| admin.branch.manage | ● | ● | — | — | — | — | — | — | — |
 | admin.capability.manage | ● | ▲ | — | — | — | — | — | — | — |
 | report.sales.view | ● | ● | ● | ▲ | — | — | — | — | ● |
 | report.audit.view | ● | ● | ● | — | — | — | — | — | ● |
@@ -132,7 +132,7 @@ Formato `contexto.recurso.ação`.
 
 > `report.sales.view ▲` para CASHIER = só o **fechamento do próprio turno**, não
 > o histórico da empresa. `catalog.price.manage ▲` para MANAGER = dentro da
-> unidade dele. `admin.capability.manage ▲` para ADMIN = não pode desligar
+> filial dele. `admin.capability.manage ▲` para ADMIN = não pode desligar
 > capability que já tem dado em uso sem confirmação extra.
 
 ---
@@ -188,9 +188,9 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | WAITER | Minhas mesas · Comandas abertas · Lançar pedido · Entregas pendentes |
 | KITCHEN / BAR | KDS da estação · Fila · Métricas de tempo (leitura) |
 | CASHIER | Comandas a pagar · Pagamentos · Sessão de caixa · Fechamento do turno |
-| MANAGER | Tudo de CASHIER/WAITER + Aprovações · Cancelamentos · Fechar caixa · Dashboard da unidade |
-| ADMIN | Catálogo · Usuários · Estações · Capabilities · Unidades |
-| OWNER | Tudo + Dashboard multiunidade · Relatórios da empresa |
+| MANAGER | Tudo de CASHIER/WAITER + Aprovações · Cancelamentos · Fechar caixa · Dashboard da filial |
+| ADMIN | Catálogo · Usuários · Estações · Capabilities · Filiais |
+| OWNER | Tudo + Dashboard multifilial · Relatórios da empresa |
 | AUDITOR | Relatórios · Timeline · Logs (somente leitura) |
 
 ---
@@ -226,3 +226,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Checagem de permissão sem Gate do Laravel — `PermissionChecker` próprio (ADR-011). |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |

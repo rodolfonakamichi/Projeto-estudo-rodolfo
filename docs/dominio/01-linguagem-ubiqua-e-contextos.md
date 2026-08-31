@@ -11,13 +11,13 @@
 | Português | Código (EN) | Definição |
 |-----------|-------------|-----------|
 | Company / Empresa | `Company` | Cliente da plataforma. Raiz do isolamento de dados. |
-| Unidade | `Unit` | Filial/loja de uma empresa. Tem mesas, estações e (opcional) estoque próprios. |
+| Filial | `Branch` | Ponto de operação de uma empresa (loja, restaurante, salão). Tem mesas, estações e (opcional) estoque próprios. |
 | Usuário | `User` | Pessoa que opera o sistema (dono, garçom, caixa, cozinha). |
 | Papel | `Role` | Conjunto nomeado de permissões (OWNER, WAITER...). |
 | Permissão | `Permission` | Ação atômica autorizável (`command.discount`). |
 | Capability | `Capability` | Recurso de plataforma ligado/desligado por empresa (`tables`, `kitchen`). |
 | Cliente / Consumidor | `Customer` | Quem consome. Opcional numa comanda de mesa; obrigatório em fiado/fidelidade. |
-| Catálogo | `Catalog` | Conjunto de categorias, produtos e serviços de uma unidade. |
+| Catálogo | `Catalog` | Conjunto de categorias, produtos e serviços de uma filial. |
 | Categoria | `Category` | Agrupamento de produtos no cardápio. |
 | Produto | `Product` | Item vendável físico/consumível (Chopp, X-Burger). |
 | Serviço | `Service` | Item vendável baseado em execução/tempo (Corte de cabelo). *Fase 3.* |
@@ -40,14 +40,14 @@
 | Forma de pagamento | `PaymentMethod` | Cadastro configurável (Dinheiro, PIX, Crédito Visa...). |
 | Caixa (sessão) | `CashRegister` | Sessão de caixa aberta por um operador, com abertura, sangrias/suprimentos e fechamento. |
 | Movimento de caixa | `CashMovement` | Entrada/saída na sessão de caixa (venda, sangria, suprimento, troco). |
-| Estoque | `Stock` | Saldo de um insumo/produto numa unidade. |
+| Estoque | `Stock` | Saldo de um insumo/produto numa filial. |
 | Movimento de estoque | `StockMovement` | Entrada, saída, ajuste ou baixa por venda. |
 | Desconto | `Discount` | Redução aplicada a item ou comanda, sujeita a autorização por faixa (seção 32). |
 | Divisão de conta | `bill split` | Repartição do total da comanda entre pessoas (igual, por item, por valor, %). |
 | Evento de domínio | `DomainEvent` | Fato relevante que aconteceu (`OrderReady`), persistido e publicado. |
 | Timeline | — | Sequência de eventos de uma comanda, exibida para auditoria/suporte (seção 55). |
 | Log de auditoria | `AuditLog` | Registro de "quem fez o quê e quando" para ações sensíveis. |
-| Número amigável | `display_number` | Número curto por unidade/dia para humanos (Comanda 42). Não é a PK. |
+| Número amigável | `display_number` | Número curto por filial/dia para humanos (Comanda 42). Não é a PK. |
 
 > **Termos proibidos** (para não gerar sinônimos): "conta" (use *comanda* ou
 > *fechamento*), "ticket" isolado (use *pedido* ou *ProductionTicket*), "mesa"
@@ -64,7 +64,7 @@ compartilhando tabelas diretamente.
 ```
 ┌──────────────────────┐      ┌──────────────────────┐
 │  Identidade & Acesso  │      │       Catálogo        │
-│  Company, Unit, User,  │      │  Category, Product,   │
+│  Company, Branch, User,  │      │  Category, Product,   │
 │  Role, Permission,    │      │  Variant, Modifier,   │
 │  Capability           │      │  Recipe               │
 └──────────┬───────────┘      └───────────┬──────────┘
@@ -175,3 +175,4 @@ de caixa).
 |------|---------|
 | 2026-08-29 | Versão inicial. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |

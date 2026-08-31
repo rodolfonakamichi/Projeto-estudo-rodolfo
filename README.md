@@ -17,7 +17,7 @@ Leia **nesta ordem** — cada documento assume o anterior.
 ### 1. Pesquisa de mercado e visão de produto
 [`docs/plataforma-universal-de-comandas.md`](docs/plataforma-universal-de-comandas.md)
 
-O "porquê" do projeto: o que o mercado já tem, onde está a oportunidade, os
+O "porquê" do projeto: o que o mercado já tem, onde está a oportfilial, os
 segmentos-alvo, os riscos e o MVP recomendado. É a fonte de tudo que vem depois.
 Se tiver pouco tempo, leia as seções **1, 2, 7, 8, 48, 50, 51, 60 e 61**.
 
