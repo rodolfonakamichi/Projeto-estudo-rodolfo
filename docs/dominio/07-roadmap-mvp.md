@@ -54,7 +54,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 ## M1 — Identidade, Tenancy e Permissões
 
 **Entregas**
-- Migrations: `companies`, `company_capabilities`, `units`, `users`, `roles`,
+- Migrations: `companies`, `company_capabilities`, `branches`, `users`, `roles`,
   `role_permissions`, `user_roles`, `discount_limits`, `counters`.
 - Autenticação: **bearer token próprio** (tabela `api_tokens` guardando o hash
   do token; middleware PSR-15 valida e injeta o usuário) + login por
@@ -63,7 +63,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
   em todo repositório; classe base de repositório força `WHERE company_id = ?`
   em todo SQL de negócio (ADR-004).
 - `PermissionChecker::assert($user, $permission, $unitId)`.
-- Seeder: 1 empresa demo, 1 unidade, papéis padrão + matriz do doc 06, 1 usuário
+- Seeder: 1 empresa demo, 1 filial, papéis padrão + matriz do doc 06, 1 usuário
   por papel.
 - `CapabilityChecker::has($company, 'kitchen')`.
 
@@ -141,7 +141,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 - `ProductionTicketStateMachine` + casos de uso `StartTicket`, `MarkTicketReady`,
   `MarkTicketDelivered`, `CancelTicket`.
 - Notificação em tempo real via **SSE** (ADR-010): stream
-  `GET /stream/unit/{id}/station/{id}` lê o outbox e emite novos tickets e
+  `GET /stream/branch/{id}/station/{id}` lê o outbox e emite novos tickets e
   mudanças de estado.
 - Recalcular status do `Order` a partir dos itens (`OrderItemReady` → ... →
   `OrderReady`).
@@ -150,7 +150,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 **Aceite**
 - Pedido com X-Burger (COZINHA) + Chopp (BAR) → **2** tickets, um por estação.
 - Marcar ticket da cozinha "pronto" → evento `ProductionReady`, o stream SSE da
-  unidade emite o evento, `Order` vira `PARTIALLY_READY`.
+  filial emite o evento, `Order` vira `PARTIALLY_READY`.
 - Ambos prontos → `Order` `READY`.
 - `KITCHEN` consegue `production.start`; `WAITER` recebe 403.
 
@@ -263,8 +263,8 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 ## M10 — QR Code (canal do cliente)
 
 **Entregas**
-- `locations` com `qr_code`; página pública `/{unit}/{qr}` → resolve
-  Location → Unidade → Company (seção 18–19).
+- `locations` com `qr_code`; página pública `/{branch}/{qr}` → resolve
+  Location → Filial → Company (seção 18–19).
 - Cardápio público (leitura do catálogo).
 - Ações do cliente (seção 17): **pedir**, **chamar garçom**, **pedir a conta**,
   **ver conta**.
@@ -273,7 +273,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 - "Chamar garçom / pedir a conta" → notificação para o PWA do garçom.
 
 **Aceite**
-- Escanear QR da Mesa 12 → cardápio da unidade certa.
+- Escanear QR da Mesa 12 → cardápio da filial certa.
 - Cliente faz pedido → aparece na comanda da Mesa 12 (cria a comanda se não
   existir) e no KDS.
 - "Pedir a conta" → garçom recebe "Mesa 12: quer pagar".
@@ -287,7 +287,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
   margem (se estoque ativo).
 - Mais vendidos (agora com dado real).
 - Alertas: pedidos atrasados, estoque baixo, divergência de caixa.
-- Multiunidade para OWNER (seção 42).
+- Multifilial para OWNER (seção 42).
 - Métricas de produção (tempo médio por produto/estação — seção 15).
 
 **Aceite**
@@ -325,3 +325,4 @@ autoatendimento pleno, API pública, marketplace de integrações.
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | ADR-011: sem Laravel. M0 reescrito (setup do zero + kernel + Phinx); auth por token próprio; repositórios PDO; Reverb → SSE; scheduler → cron + `bin/console`; toolchain `php-cs-fixer`/`phpunit`. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
