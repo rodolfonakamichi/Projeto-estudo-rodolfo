@@ -1,7 +1,7 @@
 # 06 — Matriz de Permissões
 
 > Modelo: **RBAC** (papel → permissões) + **ABAC leve** para desconto (faixa por
-> papel). Papéis e permissões são **por tenant**; um papel pode ser atribuído
+> papel). Papéis e permissões são **por empresa**; um papel pode ser atribuído
 > **por unidade** (`user_roles.unit_id`). Ver seções 31–32 da pesquisa.
 
 ---
@@ -10,15 +10,15 @@
 
 | Código | Descrição | Escopo típico |
 |--------|-----------|---------------|
-| `OWNER` | Dono. Tudo, inclusive faturamento da plataforma. | Tenant |
-| `ADMIN` | Administra configuração, catálogo, usuários. | Tenant |
+| `OWNER` | Dono. Tudo, inclusive faturamento da plataforma. | Company |
+| `ADMIN` | Administra configuração, catálogo, usuários. | Company |
 | `MANAGER` | Gerente de unidade: autoriza desconto/estorno, fecha caixa, cancela. | Unidade |
 | `CASHIER` | Caixa: pagamentos, sessão de caixa, fechar comanda. | Unidade |
 | `WAITER` | Garçom: abrir comanda, lançar item, enviar pedido, entregar. | Unidade |
 | `KITCHEN` | Cozinha: opera KDS da(s) estação(ões) de cozinha. | Estação |
 | `BAR` | Bar: opera KDS do bar. | Estação |
 | `STOCK` | Estoque: entradas, ajustes, fichas técnicas. | Unidade |
-| `AUDITOR` | Só leitura: relatórios, timeline, logs. | Tenant |
+| `AUDITOR` | Só leitura: relatórios, timeline, logs. | Company |
 
 Papéis são **cumulativos**: um usuário pode ser `WAITER` + `CASHIER`.
 
@@ -131,7 +131,7 @@ Formato `contexto.recurso.ação`.
 | report.production.view | ● | ● | ● | — | — | ● | ● | — | ● |
 
 > `report.sales.view ▲` para CASHIER = só o **fechamento do próprio turno**, não
-> o histórico do tenant. `catalog.price.manage ▲` para MANAGER = dentro da
+> o histórico da empresa. `catalog.price.manage ▲` para MANAGER = dentro da
 > unidade dele. `admin.capability.manage ▲` para ADMIN = não pode desligar
 > capability que já tem dado em uso sem confirmação extra.
 
@@ -190,15 +190,15 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | CASHIER | Comandas a pagar · Pagamentos · Sessão de caixa · Fechamento do turno |
 | MANAGER | Tudo de CASHIER/WAITER + Aprovações · Cancelamentos · Fechar caixa · Dashboard da unidade |
 | ADMIN | Catálogo · Usuários · Estações · Capabilities · Unidades |
-| OWNER | Tudo + Dashboard multiunidade · Relatórios do tenant |
+| OWNER | Tudo + Dashboard multiunidade · Relatórios da empresa |
 | AUDITOR | Relatórios · Timeline · Logs (somente leitura) |
 
 ---
 
 ## 6. Como isso vira código (nota de estudo)
 
-- **Seed** de papéis+permissões por `roles`/`role_permissions` no bootstrap do
-  tenant (o "template de negócio" da seção 47 pode variar só os padrões).
+- **Seed** de papéis+permissões por `roles`/`role_permissions` no bootstrap da
+  empresa (o "template de negócio" da seção 47 pode variar só os padrões).
 - Uma checagem central `PermissionChecker::assert($user, 'command.close', $unitId)`
   (serviço em `Application`), resolvendo as permissões do usuário a partir de
   `user_roles` / `role_permissions`. Sem framework de autorização (ADR-011).
@@ -215,7 +215,7 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
   }
   ```
 - Faixa de desconto: `DiscountPolicy::maxPercentFor($roleCodes)` lê
-  `discount_limits` (cache por tenant).
+  `discount_limits` (cache por empresa).
 
 ---
 
@@ -225,3 +225,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 |------|---------|
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Checagem de permissão sem Gate do Laravel — `PermissionChecker` próprio (ADR-011). |
+| 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |

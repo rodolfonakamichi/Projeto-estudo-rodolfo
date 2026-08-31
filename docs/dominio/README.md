@@ -7,7 +7,7 @@ seção 61 do documento de pesquisa (`../plataforma-universal-de-comandas.md`).
 
 | # | Documento | O que responde |
 |---|-----------|----------------|
-| 00 | [Decisões arquiteturais](00-decisoes-arquiteturais.md) | Stack, multi-tenant, IDs, dinheiro, eventos, o que fica fora do MVP |
+| 00 | [Decisões arquiteturais](00-decisoes-arquiteturais.md) | Stack, multiempresa, IDs, dinheiro, eventos, o que fica fora do MVP |
 | 01 | [Linguagem ubíqua e contextos](01-linguagem-ubiqua-e-contextos.md) | Glossário PT/EN, bounded contexts, mapa de contextos |
 | 02 | [Agregados e entidades](02-agregados-e-entidades.md) | Agregados, invariantes, diagrama ER |
 | 03 | [Modelo de dados](03-modelo-de-dados.md) | Tabelas MySQL, tipos, índices, chaves |
@@ -26,7 +26,7 @@ seção 61 do documento de pesquisa (`../plataforma-universal-de-comandas.md`).
 - [x] 05 — Eventos de domínio
 - [x] 06 — Matriz de permissões
 - [x] 07 — Roadmap do MVP
-- [ ] 08 — Estratégia multi-tenant (detalhe de implementação) — *próxima fase*
+- [ ] 08 — Estratégia multiempresa (detalhe de implementação) — *próxima fase*
 - [ ] 09 — Estratégia offline/sincronização — *Fase 2*
 - [ ] 10 — Especificação da API REST — *antes de codar Presentation*
 - [ ] 11–14 — Fluxos de UX (garçom, caixa, cozinha, cliente/QR) — *antes das telas*

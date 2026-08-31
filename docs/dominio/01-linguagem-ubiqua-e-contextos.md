@@ -10,12 +10,12 @@
 
 | Português | Código (EN) | Definição |
 |-----------|-------------|-----------|
-| Tenant / Empresa | `Tenant` | Cliente da plataforma. Raiz do isolamento de dados. |
-| Unidade | `Unit` | Filial/loja de um tenant. Tem mesas, estações e (opcional) estoque próprios. |
+| Company / Empresa | `Company` | Cliente da plataforma. Raiz do isolamento de dados. |
+| Unidade | `Unit` | Filial/loja de uma empresa. Tem mesas, estações e (opcional) estoque próprios. |
 | Usuário | `User` | Pessoa que opera o sistema (dono, garçom, caixa, cozinha). |
 | Papel | `Role` | Conjunto nomeado de permissões (OWNER, WAITER...). |
 | Permissão | `Permission` | Ação atômica autorizável (`command.discount`). |
-| Capability | `Capability` | Recurso de plataforma ligado/desligado por tenant (`tables`, `kitchen`). |
+| Capability | `Capability` | Recurso de plataforma ligado/desligado por empresa (`tables`, `kitchen`). |
 | Cliente / Consumidor | `Customer` | Quem consome. Opcional numa comanda de mesa; obrigatório em fiado/fidelidade. |
 | Catálogo | `Catalog` | Conjunto de categorias, produtos e serviços de uma unidade. |
 | Categoria | `Category` | Agrupamento de produtos no cardápio. |
@@ -64,12 +64,12 @@ compartilhando tabelas diretamente.
 ```
 ┌──────────────────────┐      ┌──────────────────────┐
 │  Identidade & Acesso  │      │       Catálogo        │
-│  Tenant, Unit, User,  │      │  Category, Product,   │
+│  Company, Unit, User,  │      │  Category, Product,   │
 │  Role, Permission,    │      │  Variant, Modifier,   │
 │  Capability           │      │  Recipe               │
 └──────────┬───────────┘      └───────────┬──────────┘
            │ fornece contexto de           │ fornece preço,
-           │ tenant/usuário/permissão       │ estação e ficha técnica
+           │ company/usuário/permissão       │ estação e ficha técnica
            ▼                                ▼
 ┌───────────────────────────────────────────────────────┐
 │                 Atendimento / Comanda                   │
@@ -102,7 +102,7 @@ compartilhando tabelas diretamente.
 ```
 
 ### 2.1 Identidade & Acesso
-Autentica, resolve o tenant do request, diz quais **capabilities** o tenant tem
+Autentica, resolve a empresa do request, diz quais **capabilities** a empresa tem
 e se o usuário **pode** executar uma ação. Não sabe o que é uma comanda.
 
 ### 2.2 Catálogo
@@ -146,7 +146,7 @@ de caixa).
 
 | De → Para | Tipo de relação | Como se comunicam |
 |-----------|-----------------|-------------------|
-| Acesso → todos | *Shared Kernel* (só `TenantId`, `UserId`) + *Conformist* | Middleware injeta contexto; Value Objects compartilhados em `Domain\Shared`. |
+| Acesso → todos | *Shared Kernel* (só `CompanyId`, `UserId`) + *Conformist* | Middleware injeta contexto; Value Objects compartilhados em `Domain\Shared`. |
 | Catálogo → Comanda | *Customer/Supplier* | Comanda consulta preço/estação/modificadores e **copia** para o item. |
 | Comanda → Pedidos | mesmo módulo (MVP), agregados distintos | Caso de uso cria `Order` na mesma transação. |
 | Pedidos → Produção | *Publisher/Subscriber* | Evento `OrderSentToKitchen` gera os tickets. |
@@ -174,3 +174,4 @@ de caixa).
 | Data | Mudança |
 |------|---------|
 | 2026-08-29 | Versão inicial. |
+| 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |

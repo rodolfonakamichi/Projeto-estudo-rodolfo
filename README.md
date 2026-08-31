@@ -6,7 +6,7 @@ e salões sem reescrever o núcleo.
 
 **Status atual:** modelagem de domínio concluída. **M0 (fundação) concluído** —
 Docker, kernel HTTP próprio (PSR-7/15), container, CLI, Phinx, CI. Próximo: M1
-(identidade e multi-tenant). Ver documento 07.
+(identidade e multiempresa). Ver documento 07.
 
 ---
 
@@ -29,7 +29,7 @@ recomenda:
 
 | # | Documento | Responde |
 |---|-----------|----------|
-| 00 | Decisões arquiteturais | Stack, camadas, IDs, dinheiro, multi-tenant, o que fica fora do MVP |
+| 00 | Decisões arquiteturais | Stack, camadas, IDs, dinheiro, multiempresa, o que fica fora do MVP |
 | 01 | Linguagem ubíqua e contextos | Vocabulário PT/EN e as fronteiras do sistema |
 | 02 | Agregados e entidades | Quais objetos existem e quais regras eles protegem |
 | 03 | Modelo de dados | Tabelas MySQL, tipos, índices |

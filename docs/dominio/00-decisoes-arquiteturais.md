@@ -14,7 +14,7 @@ emaranhado de condicionais e impede a expansão para bares, eventos, hotéis etc
 
 **Decisão.** O domínio central trabalha com conceitos genéricos
 (`Command`, `Order`, `Product`, `Location`, `Payment`, `Station`). O
-comportamento específico de segmento é habilitado por **capabilities** no tenant
+comportamento específico de segmento é habilitado por **capabilities** na empresa
 e por **módulos/estratégias** que se conectam a pontos de extensão.
 
 **Consequências.**
@@ -61,7 +61,7 @@ src/
 │   ├── Payment/
 │   ├── Production/
 │   ├── Inventory/
-│   └── Shared/       # ValueObjects comuns: Money, TenantId, Ulid
+│   └── Shared/       # ValueObjects comuns: Money, CompanyId, Ulid
 ├── Application/     # casos de uso (1 classe por ação): AddItemToCommand, SendOrderToKitchen...
 ├── Infrastructure/  # implementações: repositórios PDO, gateway PIX, publicação de eventos
 │   ├── Persistence/
@@ -101,7 +101,7 @@ Fora de `src/`: `bin/console` (CLI), `database/migrations` e `database/seeds`
 - ✅ Cada peça (roteador, container, migrations) é entendida isoladamente — é o
   ponto do projeto.
 - ⚠️ Nós escrevemos o "encanamento" que um framework daria pronto: kernel HTTP,
-  bootstrap, wiring do container, resolução do contexto do tenant. Custo aceito.
+  bootstrap, wiring do container, resolução do contexto da empresa. Custo aceito.
 - ⚠️ Mais arquivos e um mapeamento entidade ↔ linha do banco (sem ORM que
   esconda isso). Também é proposital.
 
@@ -127,25 +127,25 @@ collation `utf8mb4_0900_ai_ci` (MySQL) / `utf8mb4_unicode_ci` (MariaDB).
 
 ---
 
-## ADR-004 — Multi-tenant: banco único com coluna discriminadora
+## ADR-004 — Multiempresa: banco único com coluna discriminadora
 
-**Contexto.** Seção 42: um tenant tem várias unidades; precisa isolar dados.
+**Contexto.** Seção 42: uma empresa tem várias unidades; precisa isolar dados.
 
 **Decisão.** *Single database, shared schema*. **Toda** tabela de negócio tem
-`tenant_id` (e, quando fizer sentido, `unit_id`). Sem ORM não há *global scope*
-automático: um objeto imutável `TenantContext`, resolvido pelo middleware de
+`company_id` (e, quando fizer sentido, `unit_id`). Sem ORM não há *global scope*
+automático: um objeto imutável `CompanyContext`, resolvido pelo middleware de
 autenticação, é injetado em **todo** repositório, e **todo** SQL de negócio
-carrega `WHERE tenant_id = :tenant_id`. Uma classe base de repositório e um
-`QueryBuilder` fino garantem que ninguém esqueça. Chave de acesso ao tenant vem
+carrega `WHERE company_id = :company_id`. Uma classe base de repositório e um
+`QueryBuilder` fino garantem que ninguém esqueça. Chave de acesso à empresa vem
 do usuário autenticado (ou do QR Code, para o cliente).
 
 **Consequências.**
 - ✅ Simples de operar, backup único, migrações únicas.
-- ⚠️ Risco de vazamento entre tenants se alguém esquecer o filtro → mitigado por:
-  (1) `tenant_id` obrigatório na assinatura dos métodos de repositório (sem
-  default), (2) `tenant_id` em todos os índices únicos compostos,
+- ⚠️ Risco de vazamento entre companies se alguém esquecer o filtro → mitigado por:
+  (1) `company_id` obrigatório na assinatura dos métodos de repositório (sem
+  default), (2) `company_id` em todos os índices únicos compostos,
   (3) teste automatizado que garante isolamento (M1).
-- Reavaliar para *database-per-tenant* só se um cliente grande exigir.
+- Reavaliar para *database-per-company* só se um cliente grande exigir.
 
 ---
 
@@ -280,7 +280,7 @@ tudo com Eloquent/artisan em vez de entender o que acontece por baixo.
   divergência é bug.
 - Colunas geradas / índices parciais emulados (doc 03 §3, §5) vão como SQL puro
   (`$this->execute(...)`) dentro da migration.
-- Seeds de referência (papéis, permissões, tenant demo) em `database/seeds` via
+- Seeds de referência (papéis, permissões, company demo) em `database/seeds` via
   Phinx `SeedCommand`; seeds de teste ficam nas fixtures do PHPUnit.
 
 **Consequências.**
@@ -315,4 +315,5 @@ motivo — aí a migration tool do framework provavelmente substitui o Phinx.
 | Data | Mudança |
 |------|---------|
 | 2026-08-29 | Versão inicial. |
-| 2026-08-29 | ADR-011: projeto deixa de usar Laravel — PHP puro + PDO, migrations com Phinx. Reescrita da ADR-002 (camadas sem framework), ADR-004 (isolamento de tenant sem global scope), ADR-005 (`symfony/uid`), ADR-010 (SSE no lugar de Reverb). |
+| 2026-08-29 | ADR-011: projeto deixa de usar Laravel — PHP puro + PDO, migrations com Phinx. Reescrita da ADR-002 (camadas sem framework), ADR-004 (isolamento de company sem global scope), ADR-005 (`symfony/uid`), ADR-010 (SSE no lugar de Reverb). |
+| 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |

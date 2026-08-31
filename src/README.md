@@ -26,7 +26,7 @@ biblioteca. Testável sem infraestrutura.
 
 - `Domain/Shared/` — o que é usado por vários agregados: `Money` (VO de dinheiro,
   imutável, centavos + moeda, com `allocate()` para divisão de conta), e adiante
-  `Ulid`, `TenantId`, a interface `DomainEvent`.
+  `Ulid`, `CompanyId`, a interface `DomainEvent`.
 - Adiante: `Domain/Catalog/`, `Domain/Command/`, `Domain/Order/`,
   `Domain/Payment/`, `Domain/Production/`, `Domain/Inventory/`.
 

@@ -39,7 +39,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
   status` conecta no banco (ADR-011).
 - Ferramentas: PHPStan (nível 6+), php-cs-fixer, PHPUnit, `.editorconfig`.
 - CI no GitHub Actions: `php-cs-fixer --dry-run`, `phpstan`, `phpunit`.
-- Value Objects base em `src/Domain/Shared`: `Money`, `Ulid`, `TenantId`.
+- Value Objects base em `src/Domain/Shared`: `Money`, `Ulid`, `CompanyId`.
 - ADRs 001–011 versionados (já estão em `docs/dominio/00`).
 
 **Aceite**
@@ -54,24 +54,24 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 ## M1 — Identidade, Tenancy e Permissões
 
 **Entregas**
-- Migrations: `tenants`, `tenant_capabilities`, `units`, `users`, `roles`,
+- Migrations: `companies`, `company_capabilities`, `units`, `users`, `roles`,
   `role_permissions`, `user_roles`, `discount_limits`, `counters`.
 - Autenticação: **bearer token próprio** (tabela `api_tokens` guardando o hash
   do token; middleware PSR-15 valida e injeta o usuário) + login por
   e-mail/senha (`password_hash`) e por **PIN** (PWA).
-- `TenantContext` (objeto imutável) resolvido pelo middleware de auth e injetado
-  em todo repositório; classe base de repositório força `WHERE tenant_id = ?`
+- `CompanyContext` (objeto imutável) resolvido pelo middleware de auth e injetado
+  em todo repositório; classe base de repositório força `WHERE company_id = ?`
   em todo SQL de negócio (ADR-004).
 - `PermissionChecker::assert($user, $permission, $unitId)`.
-- Seeder: 1 tenant demo, 1 unidade, papéis padrão + matriz do doc 06, 1 usuário
+- Seeder: 1 empresa demo, 1 unidade, papéis padrão + matriz do doc 06, 1 usuário
   por papel.
-- `CapabilityChecker::has($tenant, 'kitchen')`.
+- `CapabilityChecker::has($company, 'kitchen')`.
 
 **Aceite**
-- Teste: usuário do tenant A **não** enxerga dado do tenant B (mesmo forçando
+- Teste: usuário da empresa A **não** enxerga dado da empresa B (mesmo forçando
   `id` na query).
 - Teste: `WAITER` recebe 403 em `command.close`; `CASHIER` recebe 200.
-- Teste: `CapabilityChecker` retorna `false` para `hotel` no tenant demo.
+- Teste: `CapabilityChecker` retorna `false` para `hotel` na empresa demo.
 
 ---
 
@@ -264,7 +264,7 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 
 **Entregas**
 - `locations` com `qr_code`; página pública `/{unit}/{qr}` → resolve
-  Location → Unidade → Tenant (seção 18–19).
+  Location → Unidade → Company (seção 18–19).
 - Cardápio público (leitura do catálogo).
 - Ações do cliente (seção 17): **pedir**, **chamar garçom**, **pedir a conta**,
   **ver conta**.
@@ -324,3 +324,4 @@ autoatendimento pleno, API pública, marketplace de integrações.
 |------|---------|
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | ADR-011: sem Laravel. M0 reescrito (setup do zero + kernel + Phinx); auth por token próprio; repositórios PDO; Reverb → SSE; scheduler → cron + `bin/console`; toolchain `php-cs-fixer`/`phpunit`. |
+| 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |

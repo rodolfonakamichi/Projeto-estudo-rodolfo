@@ -11,11 +11,11 @@
 
 | Agregado (raiz) | Contém | Invariante principal |
 |-----------------|--------|----------------------|
-| `Tenant` | `Unit[]`, `Capability[]` | Slug único; ao menos 1 unidade ativa. |
-| `User` | `Role[]` (por unidade) | E-mail único por tenant. |
+| `Company` | `Unit[]`, `Capability[]` | Slug único; ao menos 1 unidade ativa. |
+| `User` | `Role[]` (por unidade) | E-mail único por empresa. |
 | `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa OU preço próprio; soma de min/max dos grupos coerente. |
 | `Category` | — | Nome único por unidade. |
-| `Location` | — | Código de QR único por tenant. |
+| `Location` | — | Código de QR único por empresa. |
 | `Command` | `CommandItem[]`, `Discount[]`, `BillSplit?` | Total = Σ itens − descontos; só fecha se saldo = 0; item não some, é cancelado. |
 | `Order` | `OrderItem[]` | Pertence a 1 comanda aberta; não pode ser enviado vazio. |
 | `ProductionTicket` | `ProductionTicketItem[]` | Roteado para exatamente 1 estação; segue a máquina de estados. |
@@ -37,9 +37,9 @@
 
 ```mermaid
 erDiagram
-    TENANT ||--o{ UNIT : possui
-    TENANT ||--o{ TENANT_CAPABILITY : habilita
-    TENANT ||--o{ USER : possui
+    COMPANY ||--o{ UNIT : possui
+    COMPANY ||--o{ COMPANY_CAPABILITY : habilita
+    COMPANY ||--o{ USER : possui
     UNIT   ||--o{ CATEGORY : tem
     UNIT   ||--o{ PRODUCT : tem
     UNIT   ||--o{ LOCATION : tem
@@ -98,7 +98,7 @@ erDiagram
 
 **Estado:**
 ```
-id (ULID)              tenant_id, unit_id
+id (ULID)              company_id, unit_id
 display_number         # 42  (sequencial por unidade/dia)
 bind_type              MESA | BALCAO | CLIENTE | QUARTO | PULSEIRA | EVENTO | VEICULO | SERVICO | AVULSO
 bind_ref               ULID da Location (se MESA) | id do Customer | código da pulseira | texto livre
@@ -131,7 +131,7 @@ totals (calculado)     subtotal, discount_total, service_fee?, total, paid_total
 ### 3.2 `Order` (pedido)
 
 ```
-id, tenant_id, unit_id, command_id
+id, company_id, unit_id, command_id
 channel          TABLE | COUNTER | QR | DELIVERY | WHATSAPP | KIOSK | API
 placed_by        user_id (ou null se cliente via QR)
 status           CREATED | SENT | PARTIALLY_READY | READY | DELIVERED | CANCELLED
@@ -150,7 +150,7 @@ created_at, sent_at
 ### 3.3 `ProductionTicket` (o que o KDS mostra)
 
 ```
-id, tenant_id, unit_id, order_id, station_id
+id, company_id, unit_id, order_id, station_id
 status        RECEIVED | IN_PREPARATION | READY | DELIVERED | CANCELLED
 items[]       ProductionTicketItem { order_item_id, product_name, qty, modifiers_text, notes }
 received_at, started_at, ready_at, delivered_at   # base das métricas da seção 15
@@ -162,7 +162,7 @@ só vê o seu.
 ### 3.4 `Payment`
 
 ```
-id, tenant_id, unit_id, command_id, cash_register_id?
+id, company_id, unit_id, command_id, cash_register_id?
 method_id           FK PaymentMethod
 kind                CASH | PIX | CARD_DEBIT | CARD_CREDIT | VOUCHER | OTHER
 amount              BIGINT centavos
@@ -178,7 +178,7 @@ pagou".
 ### 3.5 `CashRegister` (sessão de caixa)
 
 ```
-id, tenant_id, unit_id, operator_id
+id, company_id, unit_id, operator_id
 status              OPEN | CLOSED
 opened_at, opening_amount
 closed_at?, counted_amount?, expected_amount?, difference?
@@ -196,7 +196,7 @@ sistema calcula `difference` e gera alerta se ≠ 0 (seção 43).
 |----|-----------|--------|
 | `Money` | `int amount` (centavos) + `string currency` | soma/subtração só mesma moeda; `allocate([pesos])` para divisão de conta decide o centavo restante. |
 | `Quantity` | `int` ou `decimal(10,3)` | > 0; unidade (un, kg, L). |
-| `TenantId`, `UnitId`, `UserId`, `CommandId`... | ULID validado | evita passar string crua e trocar um ID por outro. |
+| `CompanyId`, `UnitId`, `UserId`, `CommandId`... | ULID validado | evita passar string crua e trocar um ID por outro. |
 | `ModifierSelection` | lista de `modifier_id` + preço no momento | valida min/max do grupo. |
 | `BindTarget` | `bind_type` + `bind_ref` | valida combinação (MESA exige Location existente). |
 
@@ -228,3 +228,4 @@ registre como novo ADR revisando a ADR-002.
 |------|---------|
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Nota de estudo §5 reescrita para PDO + mapeador (ADR-011), sem Eloquent. |
+| 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |

@@ -45,7 +45,7 @@ inverso). Solução:
 ```json
 {
   "id": "01J9Z8Q3M7XK8V2H4B0Y6W1C5A",
-  "tenant_id": "01J9...TENANT",
+  "company_id": "01J9...COMPANY",
   "aggregate_type": "command",
   "aggregate_id": "01J9...CMD",
   "name": "OrderItemAdded",
@@ -222,3 +222,4 @@ nome de evento); a entrega ao cliente é via SSE (ADR-010).
 |------|---------|
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Despacho do outbox sem framework (ADR-011): `bin/console outbox:publish` + cron, dispatcher próprio, entrega via SSE. |
+| 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
