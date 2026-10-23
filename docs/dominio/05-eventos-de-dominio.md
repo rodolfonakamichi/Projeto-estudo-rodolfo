@@ -30,8 +30,9 @@ inverso). Solução:
 
 - **Escrever o evento** faz parte da **mesma transação** da mudança de estado.
 - **Despachar** é assíncrono e idempotente (o `id` do evento evita processar 2x).
-- Sem framework (ADR-011): `bin/console outbox:publish` chamado por cron do SO a
-  cada minuto no MVP; depois um worker residente com polling curto.
+- Com Messenger (ADR-012): `bin/console outbox:publish` lê os pendentes e
+  despacha no `event.bus`; no MVP roda por cron a cada minuto, depois vira um
+  worker residente (`messenger:consume`).
 
 > **Nota de estudo.** Não é *event sourcing* completo — o estado atual continua
 > nas tabelas normais (`commands`, `orders`...). O outbox é só a trilha de
@@ -223,3 +224,4 @@ nome de evento); a entrega ao cliente é via SSE (ADR-010).
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Despacho do outbox sem framework (ADR-011): `bin/console outbox:publish` + cron, dispatcher próprio, entrega via SSE. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-10-23 | Despacho do outbox via `event.bus` do Symfony Messenger (ADR-012). |

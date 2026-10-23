@@ -201,7 +201,8 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
   empresa (o "template de negócio" da seção 47 pode variar só os padrões).
 - Uma checagem central `PermissionChecker::assert($user, 'command.close', $unitId)`
   (serviço em `Application`), resolvendo as permissões do usuário a partir de
-  `user_roles` / `role_permissions`. Sem framework de autorização (ADR-011).
+  `user_roles` / `role_permissions`. Exposta ao framework como Voter do Symfony
+  Security (ADR-012), para controllers usarem `#[IsGranted]` quando couber.
 - A checagem acontece no **caso de uso** (`Application`), não no controller nem
   na entidade:
   ```php

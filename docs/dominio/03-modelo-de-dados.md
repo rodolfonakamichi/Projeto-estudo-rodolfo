@@ -11,7 +11,7 @@
 > - Índices únicos sempre **compostos com `company_id`**.
 > - Soft delete só onde há motivo real; preferimos `status`/`archived_at`.
 
-Este documento é o **contrato do schema**. As migrations (Phinx — ver ADR-011)
+Este documento é o **contrato do schema**. As migrations (Doctrine Migrations — ver ADR-012)
 devem bater com ele. Os tipos abaixo são um esboço para revisão — não são a
 migration final.
 
@@ -341,3 +341,4 @@ payments 1─0..1 cash_movements
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-08-30 | `user_roles.branch_id` NOT NULL DEFAULT `''` (sentinela, era NULL na PK). Adicionada `api_tokens` (auth por bearer token, M1.f). |
+| 2026-10-23 | Migrations passam a ser Doctrine Migrations (ADR-012). |

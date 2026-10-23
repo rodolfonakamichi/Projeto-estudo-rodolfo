@@ -1,9 +1,0 @@
-parameters:
-    level: 6
-    paths:
-        - src
-        - tests
-        - config
-        - public
-        - bin
-        - database

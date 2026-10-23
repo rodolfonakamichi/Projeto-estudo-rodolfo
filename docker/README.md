@@ -49,7 +49,7 @@ docker compose logs -f nginx               # acompanhar logs de um serviço
 docker compose exec php sh                 # abrir shell no container PHP
 docker compose exec php php -v
 docker compose exec php composer <cmd>
-docker compose exec php vendor/bin/phpunit
+docker compose exec php bin/phpunit
 
 docker compose down                        # derruba os containers (mantém o volume)
 docker compose down -v                     # derruba e APAGA o volume do banco
@@ -199,7 +199,7 @@ as extensões do domínio, Composer embutido e usuário não-root.
 |-----------|-----------|
 | `FROM php:8.3-fpm-alpine` | base: PHP 8.3 (exige a modelagem — `enum`, `readonly`) + FPM + Alpine |
 | `ARG UID=1000` / `ARG GID=1000` | variáveis **de build**; o compose passa os valores em `build.args` |
-| `RUN apk add --no-cache icu-dev && docker-php-ext-install pdo_mysql intl opcache` | `icu-dev` = lib exigida para compilar `intl`. Extensões: **`pdo_mysql`** (driver PDO/MySQL — base da persistência, ADR-011), **`intl`** (`\NumberFormatter`, usado por `Money` e `symfony/uid`), **`opcache`** (cache de bytecode) |
+| `RUN apk add --no-cache icu-dev && docker-php-ext-install pdo_mysql intl opcache` | `icu-dev` = lib exigida para compilar `intl`. Extensões: **`pdo_mysql`** (driver PDO/MySQL — usado pelo Doctrine DBAL, ADR-012), **`intl`** (`\NumberFormatter`, usado por `Money` e `symfony/uid`), **`opcache`** (cache de bytecode) |
 | `COPY --from=composer:2 /usr/bin/composer /usr/bin/composer` | *multi-stage*: copia só o binário do Composer da imagem oficial, versão fixa |
 | `RUN addgroup -g ${GID} app && adduser -u ${UID} -G app -s /bin/sh -D app` | cria usuário `app` com o **mesmo UID/GID do host** → arquivos do bind mount ficam seus, não do `root` |
 | `WORKDIR /var/www` | diretório padrão; é onde o compose monta o código |

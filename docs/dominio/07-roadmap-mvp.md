@@ -28,24 +28,23 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 ## M0 — Fundação do projeto
 
 **Entregas**
-- Projeto PHP 8.3 do zero: `composer init`, `require` das libs da ADR-002,
-  MySQL 8 via Docker (`docker-compose.yml` com `mysql:8`).
-- Estrutura de pastas da ADR-002 (`src/Domain`, `src/Application`,
-  `src/Infrastructure`, `src/Presentation`) + autoload PSR-4 no `composer.json`.
-- Kernel HTTP mínimo: `public/index.php` → PSR-7 → pipeline PSR-15 → FastRoute →
-  controller. Um endpoint `GET /health` respondendo `200`.
-- `bin/console` (CLI mínimo) + container `php-di` configurado em `config/`.
-- Phinx instalado: `phinx.php` lendo o mesmo `config`/`.env` do app; `phinx
-  status` conecta no banco (ADR-011).
-- Ferramentas: PHPStan (nível 6+), php-cs-fixer, PHPUnit, `.editorconfig`.
-- CI no GitHub Actions: `php-cs-fixer --dry-run`, `phpstan`, `phpunit`.
-- Value Objects base em `src/Domain/Shared`: `Money`, `Ulid`, `CompanyId`.
-- ADRs 001–011 versionados (já estão em `docs/dominio/00`).
+> Refeito sobre Symfony em 2026-10-23 (ADR-012). A primeira versão, com
+> kernel próprio + php-di + Phinx, está no histórico do git (`main` até `c445eae`).
+
+- Esqueleto Symfony 7.4 LTS (`symfony/skeleton`) em Docker (php-fpm 8.3 +
+  nginx + MySQL 8.4).
+- Camadas da ADR-002 em `src/` com Doctrine (mapeamento XML em
+  `Infrastructure`), Doctrine Migrations e Messenger (`command.bus`/`event.bus`).
+- `GET /health` (controller com `#[Route]`) e `bin/console app:health` (checa o MySQL).
+- Ferramentas: PHPStan nível 8, php-cs-fixer `@Symfony`, PHPUnit, Deptrac, Maker.
+- CI no GitHub Actions: cs-fixer, phpstan, deptrac, `lint:container`, phpunit.
+- Value Objects base em `src/Domain/Shared`: `Money`, `Ulid`; IDs tipados.
+- ADRs 001–012 versionados.
 
 **Aceite**
 - `phpunit` verde no CI.
-- `GET /health` retorna `200` pelo kernel próprio.
-- `phinx migrate` roda uma migration de teste e `phinx rollback` a desfaz.
+- `GET /health` retorna `200` (teste funcional `WebTestCase`).
+- Deptrac sem violação de camada.
 - `Money::fromCents(2599)->add(Money::fromCents(1))->cents() === 2600`.
 - PHPStan sem erro na pasta `src/Domain`.
 
@@ -57,12 +56,12 @@ Estimativa de estudo: cada milestone ≈ 1 a 2 semanas em ritmo de aprendizado.
 - Migrations: `companies`, `company_capabilities`, `branches`, `users`, `roles`,
   `role_permissions`, `user_roles`, `discount_limits`, `counters`.
 - Autenticação: **bearer token próprio** (tabela `api_tokens` guardando o hash
-  do token; middleware PSR-15 valida e injeta o usuário) + login por
+  do token; *access token authenticator* do Symfony Security valida e injeta o usuário) + login por
   e-mail/senha (`password_hash`) e por **PIN** (PWA).
-- `CompanyContext` (objeto imutável) resolvido pelo middleware de auth e injetado
-  em todo repositório; classe base de repositório força `WHERE company_id = ?`
-  em todo SQL de negócio (ADR-004).
-- `PermissionChecker::assert($user, $permission, $unitId)`.
+- `CompanyContext` (objeto imutável) resolvido na autenticação e injetado
+  em todo repositório; filtro do Doctrine (SQL filter) força `company_id = ?`
+  em toda consulta de negócio (ADR-004).
+- Permissões da matriz do doc 06 como **Voters** do Symfony Security.
 - Seeder: 1 empresa demo, 1 filial, papéis padrão + matriz do doc 06, 1 usuário
   por papel.
 - `CapabilityChecker::has($company, 'kitchen')`.
@@ -310,9 +309,10 @@ autoatendimento pleno, API pública, marketplace de integrações.
 
 1. Reler o doc de domínio correspondente.
 2. Escrever os **testes de aceite** primeiro (mesmo que falhando).
-3. Migrations (Phinx) → entidades de domínio → casos de uso → repositórios PDO →
+3. Entidades de domínio + mapeamento XML → `make:migration` (revisar contra o
+   doc 03) → casos de uso (Command + Handler) → repositórios Doctrine →
    controllers → tela.
-4. Rodar `php-cs-fixer`, `phpstan`, `phpunit`. Commit pequeno por passo.
+4. Rodar `composer check` (cs-fixer, phpstan, deptrac, phpunit). Commit pequeno por passo.
 5. Demo manual do critério de aceite.
 6. Atualizar o "Histórico" do doc de domínio se algo mudou.
 
@@ -326,3 +326,4 @@ autoatendimento pleno, API pública, marketplace de integrações.
 | 2026-08-29 | ADR-011: sem Laravel. M0 reescrito (setup do zero + kernel + Phinx); auth por token próprio; repositórios PDO; Reverb → SSE; scheduler → cron + `bin/console`; toolchain `php-cs-fixer`/`phpunit`. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-10-23 | ADR-012: M0 refeito sobre Symfony 7.4 LTS; M1 com Symfony Security (token + Voters), filtro Doctrine para `company_id`; método de trabalho com Doctrine Migrations. |

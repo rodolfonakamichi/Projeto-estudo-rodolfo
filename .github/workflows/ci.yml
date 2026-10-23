@@ -47,8 +47,18 @@ jobs:
       - name: PHP CS Fixer
         run: vendor/bin/php-cs-fixer fix --dry-run --diff
 
+      # PHPStan lê o container compilado (extensão phpstan-symfony)
+      - name: Aquecer cache do container
+        run: bin/console cache:warmup --env=dev
+
       - name: PHPStan
         run: vendor/bin/phpstan analyse --no-progress
 
+      - name: Deptrac (regra de camadas)
+        run: vendor/bin/deptrac analyse --no-progress
+
+      - name: Lint do container
+        run: bin/console lint:container
+
       - name: PHPUnit
-        run: vendor/bin/phpunit
+        run: bin/phpunit

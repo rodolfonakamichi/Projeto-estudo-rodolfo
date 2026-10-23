@@ -42,7 +42,11 @@ constantes reservadas (o código já lê a lista, só não há módulo ainda).
 
 ---
 
-## ADR-002 — Arquitetura em camadas, sem framework
+## ADR-002 — Arquitetura em camadas
+
+> **Revisada pela ADR-012** (2026-10-23): a base passou a ser Symfony 7.4 LTS.
+> As camadas e a regra de dependência abaixo continuam valendo; mudou a tabela
+> de peças de infra.
 
 **Contexto.** A seção 52 propõe camadas `Domain / Application / Infrastructure /
 Presentation`. Não usamos Laravel no dia a dia (ver ADR-011); trazer um framework
@@ -76,39 +80,40 @@ src/
 Fora de `src/`: `bin/console` (CLI), `database/migrations` e `database/seeds`
 (Phinx), `public/index.php` (front controller), `config/`, `tests/`.
 
-**Peças de infra (o que substitui o framework — detalhe fino no doc 10):**
+**Peças de infra (ADR-012):**
 
 | Necessidade | Escolha | Lib |
 |-------------|---------|-----|
-| Autoload / pacotes | Composer, PSR-4 | — |
-| Roteamento HTTP | tabela de rotas + dispatcher | `nikic/fast-route` |
-| Ciclo request/response | PSR-7 + pipeline PSR-15 | `nyholm/psr7`, `nyholm/psr7-server` |
-| Injeção de dependência | container com autowiring | `php-di/php-di` |
-| Banco | PDO (mysql), SQL na mão nos repositórios | — (ext-pdo) |
-| Migrations | ver ADR-011 | `robmorgan/phinx` |
+| Framework / kernel HTTP | Symfony 7.4 LTS (rotas por atributo) | `symfony/framework-bundle` |
+| Injeção de dependência | container do Symfony, autowiring + autoconfigure | `symfony/dependency-injection` |
+| Banco / ORM | Doctrine ORM, mapeamento **XML** em `Infrastructure` | `doctrine/orm`, `doctrine/doctrine-bundle` |
+| Migrations | Doctrine Migrations (diff a partir do mapeamento) | `doctrine/doctrine-migrations-bundle` |
+| Casos de uso / eventos | command.bus + event.bus | `symfony/messenger` |
+| Validação / serialização | DTOs de entrada/saída da API | `symfony/validator`, `symfony/serializer` |
 | Identificadores | ver ADR-005 | `symfony/uid` |
-| Templates (admin) | server-render simples | `twig/twig` |
-| Testes | — | `phpunit/phpunit` |
-| Análise estática / estilo | nível 6+ | `phpstan/phpstan`, `friendsofphp/php-cs-fixer` |
+| Testes | unitários + funcionais (`WebTestCase`) | `phpunit/phpunit`, `symfony/test-pack` |
+| Qualidade | PHPStan nível 8, `@Symfony`, regra de camadas | `phpstan/*`, `friendsofphp/php-cs-fixer`, `deptrac/deptrac` |
+| Gerador de código | esqueleto de comandos, testes, migrations | `symfony/maker-bundle` (dev) |
 
 **Regra de dependência:** `Presentation → Application → Domain`.
 `Infrastructure` implementa interfaces definidas no `Domain`/`Application`.
-`Domain` não importa nada das outras camadas nem de pacote de terceiros.
+`Domain` não importa nada das outras camadas nem de pacote de terceiros
+(exceção: `symfony/uid`, embrulhado em `Domain\Shared\Ulid`).
+Verificado no CI pelo **Deptrac** (`deptrac.yaml`).
 
 **Consequências.**
 - ✅ Regra de negócio testável sem banco e sem bootstrap de framework.
 - ✅ Trocar MySQL, gateway de pagamento ou canal de entrega não afeta o `Domain`.
-- ✅ Cada peça (roteador, container, migrations) é entendida isoladamente — é o
-  ponto do projeto.
-- ⚠️ Nós escrevemos o "encanamento" que um framework daria pronto: kernel HTTP,
-  bootstrap, wiring do container, resolução do contexto da empresa. Custo aceito.
-- ⚠️ Mais arquivos e um mapeamento entidade ↔ linha do banco (sem ORM que
-  esconda isso). Também é proposital.
+- ✅ O "encanamento" (kernel HTTP, container, migrations) vem do framework; o
+  esforço vai para domínio, casos de uso e padrões.
+- ⚠️ Disciplina para o framework não vazar para o `Domain`: nada de atributos
+  `#[ORM\...]` nas entidades, nada de `Request` fora de `Presentation`.
 
-> **Nota de estudo.** Sem ORM, o repositório é quem faz o `SELECT`/`INSERT` e
-> converte entre `Domain\Command\Command` (regra) e as linhas das tabelas. Um
-> "mapeador" por agregado concentra esse `array ⇄ objeto`. É trabalho manual —
-> exatamente o que se quer praticar aqui.
+> **Nota de estudo.** Com o mapeamento em XML, o Doctrine hidrata as entidades
+> do `Domain` sem que elas saibam que existe um ORM (padrão *Data Mapper*, o
+> oposto do *Active Record* do Eloquent). O repositório do Domain é uma
+> interface (`CommandRepository`); a implementação `DoctrineCommandRepository`
+> mora em `Infrastructure`.
 
 ---
 
@@ -246,6 +251,8 @@ Detalhamento da API e do front fica para os docs 10–14.
 
 ## ADR-011 — Sem framework; migrations com Phinx
 
+> **Substituída pela ADR-012** (2026-10-23). Mantida como registro histórico.
+
 **Contexto.** As primeiras versões dos docs assumiam Laravel 11. Mas o time não
 usa Laravel no dia a dia — o trabalho real é com **PDO na mão** em repositórios.
 Aprender Laravel só para este estudo desviaria o foco (que é modelagem de
@@ -296,6 +303,59 @@ motivo — aí a migration tool do framework provavelmente substitui o Phinx.
 
 ---
 
+## ADR-012 — Symfony 7.4 LTS + Doctrine (substitui a ADR-011)
+
+**Contexto.** O M0 e o começo do M1 foram feitos à mão (kernel PSR-7/15, php-di,
+Phinx, PDO). Cumpriu o objetivo de entender o encanamento, mas cada milestone
+gastava mais tempo reimplementando infraestrutura que modelando o domínio. O
+objetivo do estudo passou a ser **software moderno com SOLID e padrões de
+projeto** usando as ferramentas atuais do ecossistema.
+
+**Decisão.**
+
+1. **Symfony 7.4 LTS** como base (roda em PHP 8.3; a 8.x exige PHP 8.4).
+   Escolhido no lugar do Laravel porque o Symfony é desenhado em torno de
+   injeção de dependência e *Data Mapper*, o que encaixa nas camadas da ADR-002
+   sem brigar com o framework.
+2. **Doctrine ORM com mapeamento XML** em
+   `src/Infrastructure/Persistence/Doctrine/Mapping/`. Entidades do `Domain`
+   continuam PHP puro. IDs tipados (`CompanyId`...) via *custom types* do DBAL.
+3. **Doctrine Migrations** no lugar do Phinx: `make:migration` gera o diff a
+   partir do mapeamento; a migration gerada é revisada à mão e precisa bater com
+   o doc 03 (que segue sendo o contrato do schema).
+4. **Messenger** com dois barramentos: `command.bus` (um handler por caso de uso,
+   middleware `doctrine_transaction`) e `event.bus` (eventos de domínio, 0..N
+   handlers). A Application depende das interfaces `CommandBus`/`EventBus`; os
+   adapters Messenger ficam em `Infrastructure/Bus`.
+5. **Security** do Symfony para autenticação por bearer token (*access token
+   authenticator*) e **Voters** para a matriz de permissões (doc 06) — entra no M1.
+6. **Qualidade automatizada:** PHPStan nível 8 (+ extensões Symfony/Doctrine/
+   PHPUnit), php-cs-fixer `@Symfony`, Deptrac para a regra de camadas, `lint:container`.
+7. **Frontend:** decisão adiada para o M8. Até lá o backend é uma API JSON.
+
+**Padrões que o projeto pratica (onde cada um aparece):**
+
+| Padrão | Onde |
+|--------|------|
+| Ports & Adapters (hexagonal) / DIP | interfaces em `Domain`/`Application`, implementações em `Infrastructure` |
+| Command + Handler (CQRS leve) | `Application/*/XCommand` + `XHandler` via `command.bus` |
+| Repository + Data Mapper | interface no `Domain`, Doctrine em `Infrastructure` |
+| Value Object | `Money`, `Ulid`, IDs tipados |
+| Domain Events + Outbox | doc 05; `event.bus` |
+| State (máquina de estado) | doc 04 |
+| Strategy | capabilities por segmento (ADR-001) |
+| Unit of Work | `EntityManager` do Doctrine, uma transação por comando |
+
+**Consequências.**
+- ✅ Menos código de infraestrutura; M1 em diante foca em domínio e casos de uso.
+- ✅ Ferramentas de mercado (Symfony, Doctrine, Messenger) — conhecimento reaproveitável.
+- ⚠️ O Doctrine esconde SQL: rever as queries geradas (profiler / `--dump-sql`)
+  e escrever SQL/DQL à mão onde o desempenho pedir.
+- ⚠️ As migrations Phinx do M1 (branch `m1-identidade`) foram descartadas e são
+  refeitas como migrations Doctrine a partir das entidades.
+
+---
+
 ## O que está EXPLICITAMENTE fora do MVP
 
 | Item | Fase | Já previsto em... |
@@ -318,3 +378,4 @@ motivo — aí a migration tool do framework provavelmente substitui o Phinx.
 | 2026-08-29 | ADR-011: projeto deixa de usar Laravel — PHP puro + PDO, migrations com Phinx. Reescrita da ADR-002 (camadas sem framework), ADR-004 (isolamento de company sem global scope), ADR-005 (`symfony/uid`), ADR-010 (SSE no lugar de Reverb). |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-10-23 | ADR-012: Symfony 7.4 LTS + Doctrine ORM (XML) + Doctrine Migrations + Messenger. Substitui a ADR-011; revisa a tabela de libs da ADR-002. |

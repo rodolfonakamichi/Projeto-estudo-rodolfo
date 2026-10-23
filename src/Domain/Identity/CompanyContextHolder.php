@@ -29,6 +29,6 @@ final class CompanyContextHolder
 
     public function has(): bool
     {
-        return $this->context !== null;
+        return null !== $this->context;
     }
 }

@@ -4,32 +4,31 @@ declare(strict_types=1);
 
 namespace App\Presentation\Console;
 
+use App\Application\Health\DatabaseProbe;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'app:health', description: 'Verifica se a aplicação inicializa')]
-final class HealthCommand extends Command
+#[AsCommand(name: 'app:health', description: 'Verifica se a aplicação inicializa e o banco responde')]
+final readonly class HealthCommand
 {
-    public function __construct(private readonly \PDO $pdo)
+    public function __construct(private DatabaseProbe $database)
     {
-        parent::__construct();
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    public function __invoke(SymfonyStyle $io): int
     {
-        $output->writeln('<info>OK</info>');
-        $output->writeln('PHP ' . PHP_VERSION);
+        $io->writeln('PHP '.\PHP_VERSION);
 
         try {
-            $version = $this->pdo->query('SELECT VERSION()')->fetchColumn();
-            $output->writeln("MySQL {$version}");
-        } catch (\PDOException $e) {
-            $output->writeln("<error>Banco inacessível: {$e->getMessage()}</error>");
+            $io->writeln('MySQL '.$this->database->serverVersion());
+        } catch (\RuntimeException $e) {
+            $io->error($e->getMessage());
 
             return Command::FAILURE;
         }
+
+        $io->success('OK');
 
         return Command::SUCCESS;
     }

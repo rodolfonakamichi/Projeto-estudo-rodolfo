@@ -27,9 +27,14 @@ arquitetural com contexto/consequência fica nas ADRs (`docs/dominio/00-...`).
 - `declare(strict_types=1);` no topo de **todo** arquivo `.php`.
 - `namespace` PSR-4: caminho do arquivo = namespace. `App\Domain\Shared\Money`
   → `src/Domain/Shared/Money.php`. Sensível a maiúsculas.
-- Formatação: **php-cs-fixer** (config em `.php-cs-fixer.php`). Não formatar na
-  mão; rodar o fixer.
-- Análise estática: **PHPStan** nível 6+ deve passar sem erro.
+- Formatação: **php-cs-fixer**, regras `@Symfony` (config em
+  `.php-cs-fixer.dist.php`). Não formatar na mão; rodar `composer cs`.
+- Análise estática: **PHPStan** nível 8 deve passar sem erro.
+- Camadas: **Deptrac** (`deptrac.yaml`) deve passar sem violação.
+- Framework só fora do `Domain`: nada de `#[ORM\...]`, `Request` ou serviço do
+  Symfony em `src/Domain` (ADR-002/012).
+- Gerar esqueleto com o **Maker** (`make:command`, `make:test`,
+  `make:migration`...) e então mover/ajustar para a camada certa.
 - `final` por padrão em classes (VOs, entidades, casos de uso, serviços).
   Abrir para herança só com motivo.
 - Value Objects: imutáveis (`readonly`), construtor privado + *named
@@ -37,7 +42,8 @@ arquitetural com contexto/consequência fica nas ADRs (`docs/dominio/00-...`).
 
 ## Testes
 
-- **PHPUnit**. Arquivo espelha `src/` em `tests/`, namespace `Tests\`.
+- **PHPUnit**. Arquivo espelha `src/` em `tests/`, namespace `App\Tests\`.
+- `Domain`: `TestCase` puro, sem kernel. HTTP: `WebTestCase`.
 - Nome do teste descreve o comportamento: `test_soma_dois_valores_da_mesma_moeda`.
 - `assertSame` (tipo + valor) em vez de `assertEquals` sempre que possível.
 - TDD quando fizer sentido: teste vermelho → código verde → refatora.

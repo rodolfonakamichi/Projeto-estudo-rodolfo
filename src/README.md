@@ -1,6 +1,6 @@
 # `src/` — Código da aplicação
 
-Arquitetura em camadas montada à mão, sem framework (ADR-002 / ADR-011).
+Symfony 7.4 LTS organizado em camadas hexagonais (ADR-002 / ADR-012).
 Autoload PSR-4: `App\` → `src/`. O caminho do arquivo **é** o namespace
 (sensível a maiúsculas): `App\Domain\Shared\Money` → `src/Domain/Shared/Money.php`.
 
@@ -10,55 +10,62 @@ Autoload PSR-4: `App\` → `src/`. O caminho do arquivo **é** o namespace
 Presentation ──▶ Application ──▶ Domain ◀── Infrastructure
 ```
 
-- `Domain` não importa **nada** das outras camadas nem de pacote de terceiros.
-- `Application` depende só de `Domain`.
-- `Infrastructure` implementa interfaces definidas em `Domain`/`Application`.
-- `Presentation` depende de `Application`.
+- `Domain` não importa **nada** das outras camadas nem do framework
+  (exceção única: `symfony/uid`, embrulhado em `Domain\Shared\Ulid`).
+- `Application` depende só de `Domain`. Declara **portas** (interfaces).
+- `Infrastructure` implementa as portas do `Domain`/`Application` (**adapters**).
+- `Presentation` depende de `Application` (e lê tipos do `Domain`).
 
-Uma seta que aponta na direção errada é bug de arquitetura.
+Verificado pelo **Deptrac** (`deptrac.yaml`, roda no CI). Seta na direção
+errada quebra o build.
 
 ## Camadas
 
 ### `Domain/`
-Regras de negócio puras: entidades, value objects, eventos de domínio, interfaces
-de repositório, máquinas de estado. Zero dependência de framework, banco ou
-biblioteca. Testável sem infraestrutura.
+Regras de negócio puras: entidades, value objects, eventos de domínio,
+interfaces de repositório, máquinas de estado. PHP puro, testável sem kernel.
+**Fora do container** do Symfony (`config/services.yaml` exclui a pasta):
+entidade e VO nascem com `new`/named constructor, nunca por injeção.
 
-- `Domain/Shared/` — o que é usado por vários agregados: `Money` (VO de dinheiro,
-  imutável, centavos + moeda, com `allocate()` para divisão de conta), e adiante
-  `Ulid`, `CompanyId`, a interface `DomainEvent`.
-- Adiante: `Domain/Catalog/`, `Domain/Command/`, `Domain/Order/`,
-  `Domain/Payment/`, `Domain/Production/`, `Domain/Inventory/`.
+- `Domain/Shared/` — `Money`, `Ulid`, interface `DomainEvent`.
+- `Domain/Identity/` — IDs tipados (`CompanyId`, `UserId`, `BranchId`),
+  `CompanyContext`.
+- Adiante: `Catalog/`, `Command/`, `Order/`, `Payment/`, `Production/`, `Inventory/`.
 
 ### `Application/`
-Casos de uso — **uma classe por ação** (`OpenCommand`, `AddItemToCommand`,
-`SendOrderToKitchen`). Orquestra entidades e repositórios, checa permissão,
-abre transação. Não tem regra de negócio (isso é `Domain`) nem SQL (isso é
-`Infrastructure`).
+Casos de uso no padrão **Command + Handler**: `OpenCommand` (DTO com os dados)
++ `OpenCommandHandler` (implementa `CommandHandler`, método `__invoke`). O
+handler orquestra entidades e repositórios; não tem regra de negócio (`Domain`)
+nem SQL (`Infrastructure`).
+
+- `Application/Shared/Bus/` — portas `CommandBus`, `EventBus` e as interfaces
+  marcadoras `Command`, `CommandHandler`, `EventHandler`. Implementar
+  `CommandHandler` já registra o handler no `command.bus` (via `_instanceof`).
+- `Application/Health/` — porta `DatabaseProbe`.
 
 ### `Infrastructure/`
-Implementações concretas do que o `Domain`/`Application` declaram como interface:
+Adapters concretos:
 
-- `Infrastructure/Http/` — o **kernel HTTP** montado à mão: adapta o request PHP
-  para PSR-7 (`SapiEmitter`), roteia (`Router` sobre FastRoute), encadeia
-  middlewares (`Pipeline`, PSR-15). Substitui o que um framework HTTP daria pronto.
-- Adiante: `Infrastructure/Persistence/Pdo/` (repositórios com PDO, mapeadores
-  linha ⇄ entidade), gateway PIX, publicação de eventos (outbox).
+- `Infrastructure/Bus/` — `MessengerCommandBus`, `MessengerEventBus` (Symfony
+  Messenger). Cada comando roda numa transação do Doctrine.
+- `Infrastructure/Persistence/Doctrine/Mapping/` — mapeamento **XML** das
+  entidades do Domain (`Identity.Company.orm.xml` ↔ `App\Domain\Identity\Company`).
+- `Infrastructure/Health/` — `DbalDatabaseProbe`.
+- Adiante: repositórios Doctrine, tipos DBAL dos IDs, gateway PIX, outbox.
 
 ### `Presentation/`
-Entrada/saída HTTP:
+Entrada e saída:
 
-- `Presentation/Http/` — **controllers**, um por endpoint. Cada um é um
-  `RequestHandlerInterface` (PSR-15): lê o request, chama o caso de uso, monta o
-  response JSON. É aqui que mora "a API" (o kernel em `Infrastructure/Http` é só
-  o encanamento).
+- `Presentation/Http/` — controllers (`#[Route]`). Leem o request, montam o
+  Command, despacham no `CommandBus`, devolvem JSON.
+- `Presentation/Console/` — comandos `bin/console` (`#[AsCommand]`).
 
 ## Fora de `src/`
 
 | Caminho | O quê |
 |---------|-------|
-| `public/index.php` | front controller — único arquivo PHP acessível pela web |
-| `config/` | `routes.php` e (adiante) container, parâmetros |
-| `tests/` | PHPUnit, espelha `src/`, namespace `Tests\` |
-| `bin/console` | CLI (adiante, M0.5) |
-| `database/` | migrations e seeds do Phinx (adiante, M0.6) |
+| `public/index.php` | front controller (Symfony Runtime) |
+| `config/` | `services.yaml` (wiring), `packages/*.yaml` (Doctrine, Messenger...), `routes.yaml` |
+| `migrations/` | Doctrine Migrations (`make:migration` gera, revisar contra o doc 03) |
+| `tests/` | PHPUnit, espelha `src/`, namespace `App\Tests\` |
+| `bin/console` | CLI do Symfony |

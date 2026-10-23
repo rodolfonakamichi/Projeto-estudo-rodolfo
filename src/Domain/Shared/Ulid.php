@@ -24,7 +24,7 @@ final class Ulid
 
     public static function fromString(string $value): self
     {
-        if (! SymfonyUlid::isValid($value)) {
+        if (!SymfonyUlid::isValid($value)) {
             throw new \InvalidArgumentException("ULID inválido: {$value}");
         }
 
