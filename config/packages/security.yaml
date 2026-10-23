@@ -1,0 +1,25 @@
+security:
+    # Usuários não vêm de um provider do Symfony: o OpaqueTokenHandler monta o
+    # principal (AuthenticatedUser/AuthenticatedDevice) a partir do token.
+    providers:
+        none:
+            memory: null
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+        api:
+            pattern: ^/api
+            stateless: true # sem sessão/cookie: todo request traz o Bearer
+            provider: none
+            access_token:
+                token_handler: App\Infrastructure\Security\OpaqueTokenHandler
+                failure_handler: App\Presentation\Http\Error\JsonAuthenticationFailureHandler
+
+    # A primeira regra que casar vale
+    access_control:
+        - { path: ^/api/auth/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/pin$, roles: ROLE_DEVICE }
+        - { path: ^/api/device/, roles: ROLE_DEVICE }
+        - { path: ^/api, roles: ROLE_USER }

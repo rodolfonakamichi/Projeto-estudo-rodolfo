@@ -93,6 +93,20 @@ docker compose exec php bin/console doctrine:migrations:migrate
 docker compose exec php bin/console make:test              # esqueleto de teste (Maker)
 ```
 
+### API (M1.3 — autenticação)
+
+```bash
+# login por senha (empresa + e-mail + senha) → token u_...
+curl -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+     -d '{"company":"bar-demo","email":"ana@bar.com","password":"segredo123"}'
+curl localhost:8080/api/me -H "Authorization: Bearer u_..."
+# parear tablet (MANAGER+) → token d_... ; tela de PIN ; login por PIN
+curl -X POST localhost:8080/api/devices -H "Authorization: Bearer u_..." -H 'Content-Type: application/json' -d '{"branchId":"...","name":"Tablet"}'
+curl localhost:8080/api/device/users -H "Authorization: Bearer d_..."
+curl -X POST localhost:8080/api/auth/pin -H "Authorization: Bearer d_..." -H 'Content-Type: application/json' -d '{"userId":"...","pin":"1234"}'
+curl -X POST localhost:8080/api/auth/logout -H "Authorization: Bearer u_..."
+```
+
 ### Testes (PHPUnit)
 
 ```bash

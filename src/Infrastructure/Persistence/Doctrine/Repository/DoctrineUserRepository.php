@@ -30,6 +30,11 @@ final readonly class DoctrineUserRepository implements UserRepository
 
     public function emailExists(CompanyId $companyId, Email $email): bool
     {
-        return null !== $this->em->getRepository(User::class)->findOneBy(['company' => $companyId, 'email' => $email]);
+        return null !== $this->findByEmail($companyId, $email);
+    }
+
+    public function findByEmail(CompanyId $companyId, Email $email): ?User
+    {
+        return $this->em->getRepository(User::class)->findOneBy(['company' => $companyId, 'email' => $email]);
     }
 }

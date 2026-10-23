@@ -81,6 +81,7 @@ Formato `contexto.recurso.ação`.
 | `admin.user.manage` | CRUD de usuários e papéis |
 | `admin.branch.manage` | CRUD de filiais |
 | `admin.capability.manage` | Ligar/desligar capabilities |
+| `admin.device.manage` | Parear/revogar aparelhos (tablet do salão, KDS) na filial |
 | `report.sales.view` | Relatórios de venda, ticket médio, margem |
 | `report.audit.view` | Timeline e logs de auditoria |
 | `report.production.view` | Métricas de tempo de produção |
@@ -126,6 +127,7 @@ Formato `contexto.recurso.ação`.
 | admin.user.manage | ● | ● | — | — | — | — | — | — | — |
 | admin.branch.manage | ● | ● | — | — | — | — | — | — | — |
 | admin.capability.manage | ● | ▲ | — | — | — | — | — | — | — |
+| admin.device.manage | ● | ● | ● | — | — | — | — | — | — |
 | report.sales.view | ● | ● | ● | ▲ | — | — | — | — | ● |
 | report.audit.view | ● | ● | ● | — | — | — | — | — | ● |
 | report.production.view | ● | ● | ● | — | — | ● | ● | — | ● |
@@ -229,3 +231,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | Limite de desconto passa a ser coluna de `roles`. Matriz §3 materializada em `Domain\Identity\DefaultRoles` (▲ = concedida); permissões como enum `Permission`; checagem em `User::can()`. |
+| 2026-10-23 | Nova permissão `admin.device.manage` (OWNER/ADMIN/MANAGER) para parear aparelhos (M1.3). Permissão nova = atualizar `DefaultRoles` + migration de dados para empresas existentes. |

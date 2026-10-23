@@ -377,6 +377,14 @@ projeto** usando as ferramentas atuais do ecossistema.
   dele só se expõe o ID (`companyId()`).
 - **`id` das entidades sem `readonly`** (proxy lazy-ghost do Doctrine regrava
   o id ao inicializar no PHP 8.3).
+- **Autenticação (M1.3):** token opaco próprio (`u_`/`d_` + 256 bits, só o
+  SHA-256 no banco) no `access_token` do Symfony Security, via
+  `Infrastructure\Security\OpaqueTokenHandler`. O principal do Symfony
+  (`AuthenticatedUser`/`AuthenticatedDevice`) é um adapter — a entidade `User`
+  não implementa `UserInterface`. Presentation pode ler esses dois principais
+  (exceção no Deptrac). Senha/PIN com bcrypt atrás da porta `PasswordHasher`.
+- **Permissão nova = migration de dados.** `DefaultRoles` só vale para
+  empresas novas; as existentes recebem a permissão por migration SQL.
 - **Testes de integração** com MySQL real (`comandas_test`), cada teste numa
   transação desfeita no fim (`dama/doctrine-test-bundle`).
 

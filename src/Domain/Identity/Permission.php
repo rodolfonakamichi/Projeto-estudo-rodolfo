@@ -54,6 +54,7 @@ enum Permission: string
     case AdminUserManage = 'admin.user.manage';
     case AdminBranchManage = 'admin.branch.manage';
     case AdminCapabilityManage = 'admin.capability.manage';
+    case AdminDeviceManage = 'admin.device.manage';
     case ReportSalesView = 'report.sales.view';
     case ReportAuditView = 'report.audit.view';
     case ReportProductionView = 'report.production.view';

@@ -27,6 +27,11 @@ deptrac:
       collectors:
         - type: classLike
           value: ^(Symfony\\Component\\Uid|Doctrine\\Common\\Collections)\\.*
+    # Interface PSR do relógio: a Application lê a hora sem depender do Symfony
+    - name: PsrClock
+      collectors:
+        - type: classLike
+          value: ^Psr\\Clock\\.*
     - name: Vendor
       collectors:
         - type: bool
@@ -36,17 +41,24 @@ deptrac:
           must_not:
             - type: classLike
               value: ^(Symfony\\Component\\Uid|Doctrine\\Common\\Collections)\\.*
+            - type: classLike
+              value: ^Psr\\Clock\\.*
   ruleset:
     Domain:
       - DomainLibs
     Application:
       - Domain
+      - DomainLibs
+      - PsrClock
     Infrastructure:
       - Domain
       - Application
       - DomainLibs
+      - PsrClock
       - Vendor
     Presentation:
       - Application
       - Domain
+      - Infrastructure # só os principais do Security (AuthenticatedUser/Device)
+      - DomainLibs
       - Vendor

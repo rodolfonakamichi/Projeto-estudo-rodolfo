@@ -17,9 +17,8 @@
   (aproveita os docs atualizados e os VOs do M1).
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
-- **Milestone atual:** **M1** sobre Symfony. M1.1 (`Company`) commitado
-  (`adba7db`). M1.2 (`User` + `Role`) pronto, não commitado. Próximo:
-  **M1.3 — autenticação (Symfony Security + `api_tokens`)**.
+- **Milestone atual:** **M1** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
+  M1.3 (autenticação) pronto, não commitado. Próximo: **M1.4 — multiempresa**.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -76,7 +75,7 @@ Mantido do M1 antigo: `Money`, `Ulid`, `Identifier` + `CompanyId`/`UserId`/`Bran
 
 Demo: `bin/console app:company:register "Bar do Zé" bar-do-ze --capability=tables --capability=kitchen`
 
-### M1.2 — agregados User e Role (pronto, aguardando commit)
+### M1.2 — agregados User e Role (commit `091b3c2`)
 Decisões do usuário: login = **slug + e-mail + senha**; PIN = **escolhe o
 usuário, depois digita** (bcrypt, pode repetir); limite de desconto =
 **coluna `roles.max_discount_percent`** (`discount_limits` removida).
@@ -96,15 +95,29 @@ usuário, depois digita** (bcrypt, pode repetir); limite de desconto =
 
 Demo: `bin/console app:user:register bar-do-ze "Ana" ana@bar.com --role=CASHIER --role=WAITER@<branchId> --pin=1234`
 
+### M1.3 — autenticação (pronto, aguardando commit)
+Decisões do usuário: **pareamento de aparelho** (token `d_` por filial, só
+lista usuários e troca PIN por token); token de usuário **expira 12h após o
+último uso**; **5 falhas / 15 min** por alvo+IP (senha e PIN).
+
+| Entrega | Onde |
+|---|---|
+| `OpaqueToken` (`u_`/`d_` + 256 bits, SHA-256), `ApiToken` (expiração deslizante), `Device` (pareamento) | `src/Domain/Identity/` |
+| Casos de uso `LoginWithPassword` (anti-timing), `LoginWithPin`, `PairDevice` (exige `admin.device.manage`), `Logout`; `TokenPolicy` | `src/Application/Identity/Auth/` |
+| Query (CQRS leitura) `DeviceUsersQuery` → `DbalDeviceUsersQuery` (SQL direto) | `src/Infrastructure/Persistence/Dbal/` |
+| Security: `OpaqueTokenHandler` (access_token), `AuthenticatedUser`/`AuthenticatedDevice`, `NativePasswordHasher` (custo por env) | `src/Infrastructure/Security/`, `config/packages/security.yaml` |
+| Endpoints `/api/auth/login`, `/api/auth/pin`, `/api/auth/logout`, `/api/devices`, `/api/device/users`, `/api/me`; DTOs com `#[MapRequestPayload]` | `src/Presentation/Http/Auth/` |
+| Erros JSON padronizados (401/403/422/429), locale pt_BR | `src/Presentation/Http/Error/`, `config/packages/translation.yaml` |
+| Rate limiter `login` | `config/packages/rate_limiter.yaml` |
+| Migrations `api_tokens`, `devices` + **migration de dados** (`admin.device.manage` p/ empresas existentes) | `migrations/` |
+| Testes: `ApiTokenTest` (expiração), `AuthFlowTest` (HTTP ponta a ponta, MockClock, 429) — 69 verdes | `tests/` |
+
 ---
 
 ## Próximos passos — M1 sobre Symfony
 
 1. ~~Agregado Company~~ (M1.1). ~~User + Role~~ (M1.2).
-2. **M1.3 — Autenticação:** Symfony Security (`security-bundle`); tabela
-   `api_tokens` (hash sha256) + `access_token` authenticator; endpoints
-   `POST /api/login` (slug + e-mail + senha) e login por PIN (usuário + PIN);
-   `/health` público, `/api/*` protegido; `CompanyContext` montado no login.
+2. ~~Autenticação~~ (M1.3).
 3. **M1.4 — Multiempresa:** filtro SQL do Doctrine (`CompanyFilter`) ligado com
    o `CompanyContext`; `CompanyContextHolder` para `Application` com
    `ResetInterface`. Aceite: usuário da empresa A não vê dado da B.
@@ -143,6 +156,12 @@ Demo: `bin/console app:user:register bar-do-ze "Ana" ana@bar.com --role=CASHIER 
   bundle em `config/bundles.php` e config à mão.
 - **DBAL 4:** `ConversionException::conversionFailed` não existe mais →
   `Types\Exception\ValueNotConvertible::new()`.
+- **Rate limiter em teste:** `ArrayAdapter` é zerado pelo `services_resetter`
+  entre requests do `KernelBrowser` → usar o cache padrão e dar
+  `cache.rate_limiter->clear()` no `setUp`.
+- **bcrypt em teste:** custo 4 (`when@test` em `services.yaml`) — sem isso a
+  suíte levava 24 s em vez de 1 s.
+- **XML do Doctrine:** `options` é elemento filho (`<options><option name="fixed">true</option></options>`), não atributo.
 - **PHPStan** lê o container compilado (`var/cache/dev/...xml`): rodar
   `bin/console cache:warmup` antes se o cache estiver limpo. Cache velho depois
   de `composer require` → `vendor/bin/phpstan clear-result-cache`.

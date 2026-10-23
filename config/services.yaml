@@ -4,6 +4,10 @@
 # packages/ configura as dependências (Doctrine, Messenger...).
 
 parameters:
+    # Ociosidade do token de usuário (ISO 8601): expira 12h após o último uso
+    app.auth.user_token_idle: 'PT12H'
+    # bcrypt: caro de propósito (força bruta). Em teste, o mínimo (ver when@test)
+    app.password_hash_cost: 12
 
 services:
     _defaults:
@@ -33,3 +37,16 @@ services:
     App\Domain\Identity\UserRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineUserRepository'
     App\Domain\Identity\RoleRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineRoleRepository'
     App\Domain\Identity\PasswordHasher: '@App\Infrastructure\Security\NativePasswordHasher'
+    App\Domain\Identity\ApiTokenRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineApiTokenRepository'
+    App\Domain\Identity\DeviceRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineDeviceRepository'
+
+    App\Application\Identity\Auth\TokenPolicy:
+        arguments: ['%app.auth.user_token_idle%']
+    App\Application\Identity\Auth\DeviceUsersQuery: '@App\Infrastructure\Persistence\Dbal\DbalDeviceUsersQuery'
+
+    App\Infrastructure\Security\NativePasswordHasher:
+        arguments: ['%app.password_hash_cost%']
+
+when@test:
+    parameters:
+        app.password_hash_cost: 4

@@ -67,6 +67,7 @@ final class DefaultRoles
                 Permission::ReportSalesView,
                 Permission::ReportAuditView,
                 Permission::ReportProductionView,
+                Permission::AdminDeviceManage,
             ], null],
             'ADMIN' => ['Administrador', [
                 Permission::CommandOpen,
@@ -104,6 +105,7 @@ final class DefaultRoles
                 Permission::ReportSalesView,
                 Permission::ReportAuditView,
                 Permission::ReportProductionView,
+                Permission::AdminDeviceManage,
             ], null],
             'MANAGER' => ['Gerente', [
                 Permission::CommandOpen,
@@ -138,6 +140,7 @@ final class DefaultRoles
                 Permission::ReportSalesView,
                 Permission::ReportAuditView,
                 Permission::ReportProductionView,
+                Permission::AdminDeviceManage,
             ], Percentage::fromHundredths(2000)],
             'CASHIER' => ['Caixa', [
                 Permission::CommandOpen,

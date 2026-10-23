@@ -94,9 +94,27 @@ migration final.
 | created_at | DATETIME(6) | |
 | — | | `UNIQUE (token_hash)`, `INDEX (user_id)` |
 
-> Autenticação (M1.f): header `Authorization: Bearer <token>` → hash → busca em
-> `api_tokens` → resolve `user_id` + `company_id` → monta o `CompanyContext`.
-> O token em claro **nunca** é gravado.
+> Autenticação (M1.3): header `Authorization: Bearer u_<64 hex>` → SHA-256 →
+> busca em `api_tokens` → resolve `user_id` + `company_id`. O token em claro
+> **nunca** é gravado. `expires_at` é **deslizante**: cada uso empurra para
+> agora + 12h (`app.auth.user_token_idle`); `NULL` = não expira (integração).
+
+### `devices`
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | CHAR(26) PK | |
+| company_id | CHAR(26) FK → companies | |
+| branch_id | CHAR(26) FK → branches | o aparelho serve a UMA filial |
+| paired_by | CHAR(26) FK → users | quem pareou (precisa de `admin.device.manage`) |
+| name | VARCHAR(80) | "Tablet salão", "KDS cozinha" |
+| token_hash | CHAR(64) | SHA-256 do token `d_...`; `UNIQUE` |
+| last_used_at | DATETIME(6) NULL | |
+| revoked_at | DATETIME(6) NULL | aparelho perdido/roubado |
+| created_at | DATETIME(6) | |
+
+> Fluxo do PWA: gerente pareia o tablet (`POST /api/devices`) → o tablet guarda
+> o token `d_` → lista quem pode logar (`GET /api/device/users`) → a pessoa
+> toca no nome e digita o PIN (`POST /api/auth/pin`) → recebe token `u_`.
 
 ---
 
@@ -355,3 +373,4 @@ payments 1─0..1 cash_movements
 | 2026-10-23 | Migrations passam a ser Doctrine Migrations (ADR-012). |
 | 2026-10-23 | `user_roles` ganha `id` próprio; `branch_id` vira FK nullable (`NULL` = empresa toda), unicidade garantida pelo agregado `User`. Datas: DATETIME(6) via tipos sobrescritos do DBAL. |
 | 2026-10-23 | M1.2: `discount_limits` removida — limite vira `roles.max_discount_percent`. `role_permissions` PK `(permission, role_id)` + índice em `role_id`. Login por slug + e-mail; PIN após escolher o usuário. |
+| 2026-10-23 | M1.3: tabela `devices` (aparelho pareado); `api_tokens` com prefixo `u_` e expiração deslizante. |

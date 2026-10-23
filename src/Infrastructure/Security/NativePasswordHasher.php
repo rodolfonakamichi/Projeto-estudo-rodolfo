@@ -15,9 +15,10 @@ final readonly class NativePasswordHasher implements PasswordHasher
 {
     private SymfonyNativeHasher $hasher;
 
-    public function __construct()
+    /** @param int<4, 31> $cost custo do bcrypt (config: app.password_hash_cost; 4 em teste) */
+    public function __construct(int $cost)
     {
-        $this->hasher = new SymfonyNativeHasher();
+        $this->hasher = new SymfonyNativeHasher(cost: $cost);
     }
 
     public function hash(string $plain): string

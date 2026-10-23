@@ -169,6 +169,24 @@ class User implements Timestamped
         return $this->company->id();
     }
 
+    /** Referência somente-leitura (para outros agregados apontarem a FK). */
+    public function company(): Company
+    {
+        return $this->company;
+    }
+
+    /** Tem algum papel válido nesta filial? (pré-requisito do login por PIN no aparelho) */
+    public function worksAt(BranchId $branchId): bool
+    {
+        foreach ($this->roles as $assignment) {
+            if ($assignment->appliesTo($branchId)) {
+                return $this->isActive();
+            }
+        }
+
+        return false;
+    }
+
     public function name(): string
     {
         return $this->name;

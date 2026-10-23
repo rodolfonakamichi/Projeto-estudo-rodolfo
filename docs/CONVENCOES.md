@@ -67,3 +67,12 @@ arquitetural com contexto/consequência fica nas ADRs (`docs/dominio/00-...`).
 - Idioma: **português** em documentação, comentários, nomes de teste e mensagens
   de domínio voltadas ao usuário. **Inglês** em nomes de classe, método,
   variável, tabela e coluna (a linguagem ubíqua do doc 01 fixa o par PT↔EN).
+
+## Banco e migrations
+
+- Schema muda pelo mapeamento XML → `make:migration` → revisar o SQL contra o
+  doc 03 → testar `migrate prev` + `migrate` → conferir que um novo `diff` sai vazio.
+- **Mudou dado de referência no código** (ex.: permissão nova em
+  `DefaultRoles`)? Escrever também uma **migration de dados** para as empresas
+  que já existem — o código só alcança as empresas criadas depois.
+- Aplicar em dev **e** teste: `doctrine:migrations:migrate` e `... --env=test`.
