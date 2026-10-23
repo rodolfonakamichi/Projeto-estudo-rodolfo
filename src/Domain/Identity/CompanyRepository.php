@@ -14,5 +14,7 @@ interface CompanyRepository
 
     public function get(CompanyId $id): Company;
 
+    public function getBySlug(Slug $slug): Company;
+
     public function slugExists(Slug $slug): bool;
 }

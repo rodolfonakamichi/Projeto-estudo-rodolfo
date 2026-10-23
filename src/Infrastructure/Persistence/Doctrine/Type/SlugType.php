@@ -5,23 +5,27 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Doctrine\Type;
 
 use App\Domain\Identity\Slug;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\Type;
 
-final class SlugType extends Type
+/** @extends StringValueType<Slug> */
+final class SlugType extends StringValueType
 {
-    public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
+    protected function length(): int
     {
-        return $platform->getStringTypeDeclarationSQL(['length' => 80]);
+        return 80;
     }
 
-    public function convertToPHPValue(mixed $value, AbstractPlatform $platform): ?Slug
+    protected function fromString(string $value): Slug
     {
-        return null === $value ? null : Slug::fromString((string) $value);
+        return Slug::fromString($value);
     }
 
-    public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): ?string
+    protected function toString(object $value): string
     {
-        return $value instanceof Slug ? $value->toString() : null;
+        return $value->toString();
+    }
+
+    protected function valueClass(): string
+    {
+        return Slug::class;
     }
 }

@@ -139,7 +139,7 @@ Formato `contexto.recurso.ação`.
 
 ## 4. Autorização de desconto por faixa (seção 32)
 
-Tabela `discount_limits` (`role_code` → `max_percent`):
+Coluna `roles.max_discount_percent` (`NULL` = sem limite). Valores padrão:
 
 | Papel | Limite padrão |
 |-------|---------------|
@@ -228,3 +228,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-08-29 | Checagem de permissão sem Gate do Laravel — `PermissionChecker` próprio (ADR-011). |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-10-23 | Limite de desconto passa a ser coluna de `roles`. Matriz §3 materializada em `Domain\Identity\DefaultRoles` (▲ = concedida); permissões como enum `Permission`; checagem em `User::can()`. |

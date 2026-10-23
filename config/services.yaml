@@ -30,3 +30,6 @@ services:
     # acima, então o autowiring não liga a interface à implementação sozinho:
     # a ligação fica explícita aqui (um lugar só para trocar um adapter).
     App\Domain\Identity\CompanyRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineCompanyRepository'
+    App\Domain\Identity\UserRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineUserRepository'
+    App\Domain\Identity\RoleRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineRoleRepository'
+    App\Domain\Identity\PasswordHasher: '@App\Infrastructure\Security\NativePasswordHasher'

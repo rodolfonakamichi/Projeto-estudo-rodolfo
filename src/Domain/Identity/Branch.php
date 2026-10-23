@@ -20,7 +20,7 @@ class Branch implements Timestamped
 
     /** @internal use Company::addBranch() */
     public function __construct(
-        private readonly BranchId $id,
+        private BranchId $id, // sem readonly: proxy do Doctrine regrava o id (PHP 8.3)
         private readonly Company $company,
         private string $name,
         private string $timezone,

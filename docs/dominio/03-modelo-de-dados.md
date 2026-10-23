@@ -47,17 +47,26 @@ migration final.
 | id | CHAR(26) PK |
 | company_id | CHAR(26) FK |
 | name | VARCHAR(150) |
-| email | VARCHAR(190) |
-| password_hash | VARCHAR(255) |
-| pin_hash | VARCHAR(255) NULL | login rápido no PWA (4–6 dígitos) |
-| status | VARCHAR(30) |
+| email | VARCHAR(190) | normalizado (minúsculas) |
+| password_hash | VARCHAR(255) | bcrypt/argon2 |
+| pin_hash | VARCHAR(255) NULL | login rápido no PWA (4–6 dígitos) — o usuário é escolhido na tela e depois digita o PIN; PIN pode repetir entre pessoas |
+| status | VARCHAR(30) | ACTIVE / INACTIVE |
 | — | | `UNIQUE (company_id, email)` |
 
+> Login por senha: **slug da empresa + e-mail + senha** (o e-mail só é único
+> dentro da empresa).
+
 ### `roles`
-| id | CHAR(26) PK | company_id | code VARCHAR(30) (`OWNER`,`WAITER`...) | name VARCHAR(80) | `UNIQUE (company_id, code)` |
+| id | CHAR(26) PK |
+| company_id | CHAR(26) FK → companies |
+| code | VARCHAR(30) | `OWNER`, `WAITER`... |
+| name | VARCHAR(80) | |
+| max_discount_percent | DECIMAL(5,2) NULL | limite de desconto do papel (doc 06 §4); `NULL` = sem limite |
+| created_at, updated_at | DATETIME(6) | |
+| — | | `UNIQUE (company_id, code)` |
 
 ### `role_permissions`
-| role_id | CHAR(26) FK | permission VARCHAR(60) | `PRIMARY KEY (role_id, permission)` |
+| role_id | CHAR(26) FK | permission VARCHAR(60) | `PRIMARY KEY (permission, role_id)` + `INDEX (role_id)` |
 
 ### `user_roles`
 | id | CHAR(26) PK |
@@ -70,9 +79,6 @@ migration final.
 > vira FK de verdade e o mapeamento Doctrine fica simples. Como o MySQL aceita
 > vários `NULL` num índice único, a duplicidade de papel "empresa toda" é
 > barrada pelo agregado `User` (que tem a coleção de papéis), não pelo banco.
-
-### `discount_limits`
-| id | CHAR(26) PK | company_id | role_code VARCHAR(30) | max_percent DECIMAL(5,2) NULL (`NULL` = sem limite) | `UNIQUE (company_id, role_code)` |
 
 ### `api_tokens`
 | Coluna | Tipo | Notas |
@@ -348,3 +354,4 @@ payments 1─0..1 cash_movements
 | 2026-08-30 | `user_roles.branch_id` NOT NULL DEFAULT `''` (sentinela, era NULL na PK). Adicionada `api_tokens` (auth por bearer token, M1.f). |
 | 2026-10-23 | Migrations passam a ser Doctrine Migrations (ADR-012). |
 | 2026-10-23 | `user_roles` ganha `id` próprio; `branch_id` vira FK nullable (`NULL` = empresa toda), unicidade garantida pelo agregado `User`. Datas: DATETIME(6) via tipos sobrescritos do DBAL. |
+| 2026-10-23 | M1.2: `discount_limits` removida — limite vira `roles.max_discount_percent`. `role_permissions` PK `(permission, role_id)` + índice em `role_id`. Login por slug + e-mail; PIN após escolher o usuário. |

@@ -33,6 +33,11 @@ final readonly class DoctrineCompanyRepository implements CompanyRepository
         return $this->em->find(Company::class, $id) ?? throw CompanyNotFound::withId($id);
     }
 
+    public function getBySlug(Slug $slug): Company
+    {
+        return $this->em->getRepository(Company::class)->findOneBy(['slug' => $slug]) ?? throw CompanyNotFound::withSlug($slug);
+    }
+
     public function slugExists(Slug $slug): bool
     {
         return null !== $this->em->getRepository(Company::class)->findOneBy(['slug' => $slug]);

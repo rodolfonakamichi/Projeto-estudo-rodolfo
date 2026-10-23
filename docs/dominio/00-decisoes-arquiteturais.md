@@ -371,6 +371,12 @@ projeto** usando as ferramentas atuais do ecossistema.
   `ClockInterface` injetado (congelável em teste).
 - **Porta → adapter explícito** em `config/services.yaml` (o Domain fica fora
   do container, então o autowiring não liga a interface sozinho).
+- **Referência entre agregados por objeto, só leitura.** `Role`/`User`
+  apontam para `Company` (e `UserRole` para `Branch`) como objeto, para o
+  Doctrine gerar a FK. Nenhum agregado altera outro por essa referência; fora
+  dele só se expõe o ID (`companyId()`).
+- **`id` das entidades sem `readonly`** (proxy lazy-ghost do Doctrine regrava
+  o id ao inicializar no PHP 8.3).
 - **Testes de integração** com MySQL real (`comandas_test`), cada teste numa
   transação desfeita no fim (`dama/doctrine-test-bundle`).
 

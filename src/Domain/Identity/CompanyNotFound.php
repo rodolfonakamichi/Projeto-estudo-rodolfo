@@ -12,4 +12,9 @@ final class CompanyNotFound extends DomainException
     {
         return new self("Empresa {$id} não encontrada.");
     }
+
+    public static function withSlug(Slug $slug): self
+    {
+        return new self("Empresa \"{$slug->toString()}\" não encontrada.");
+    }
 }

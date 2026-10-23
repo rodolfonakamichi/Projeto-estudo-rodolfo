@@ -33,7 +33,7 @@ class Company implements Timestamped
     private Collection $capabilities;
 
     private function __construct(
-        private readonly CompanyId $id,
+        private CompanyId $id, // sem readonly: proxy do Doctrine regrava o id (PHP 8.3)
         private string $name,
         private readonly Slug $slug,
     ) {

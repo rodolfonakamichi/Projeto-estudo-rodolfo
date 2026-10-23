@@ -39,6 +39,9 @@ arquitetural com contexto/consequência fica nas ADRs (`docs/dominio/00-...`).
   Abrir para herança só com motivo. **Exceção: entidades mapeadas pelo
   Doctrine** não são `final` — no PHP 8.3 o lazy loading gera um *proxy* que
   estende a classe (no PHP 8.4 os *lazy objects* nativos resolvem isso).
+  Pelo mesmo motivo, a propriedade de **identidade** (`$id`, ou as partes de
+  uma PK composta) não é `readonly`: o proxy já nasce com o id e o Doctrine o
+  regrava ao inicializar. Fica `private` e sem setter.
 - Value Objects: imutáveis (`readonly`), construtor privado + *named
   constructors* (`fromCents`, `fromString`), igualdade por valor (`equals`).
 

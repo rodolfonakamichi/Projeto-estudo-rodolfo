@@ -12,7 +12,8 @@
 | Agregado (raiz) | Contém | Invariante principal |
 |-----------------|--------|----------------------|
 | `Company` | `Branch[]`, `Capability[]` | Slug único; ao menos 1 filial ativa. |
-| `User` | `Role[]` (por filial) | E-mail único por empresa. |
+| `User` | `UserRole[]` (papel + filial opcional) | E-mail único por empresa; papel/filial da mesma empresa; sem papel duplicado no mesmo escopo. |
+| `Role` | `RolePermission[]` | Código único por empresa; limite de desconto do papel. |
 | `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa OU preço próprio; soma de min/max dos grupos coerente. |
 | `Category` | — | Nome único por filial. |
 | `Location` | — | Código de QR único por empresa. |
@@ -227,3 +228,4 @@ implementa a interface do Domain.
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | Nota §5 reescrita para Doctrine Data Mapper (ADR-012). Agregado `Company` implementado no M1. |
+| 2026-10-23 | `Role` vira agregado próprio (permissões + limite de desconto). `User` guarda `UserRole[]` com filial opcional. |

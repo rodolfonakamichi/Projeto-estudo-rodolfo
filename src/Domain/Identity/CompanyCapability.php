@@ -17,7 +17,7 @@ class CompanyCapability implements Timestamped
 
     /** @internal use Company::enableCapability() */
     public function __construct(
-        private readonly CompanyCapabilityId $id,
+        private CompanyCapabilityId $id, // sem readonly: proxy do Doctrine regrava o id (PHP 8.3)
         private readonly Company $company,
         private readonly Capability $capability,
         private bool $enabled = true,

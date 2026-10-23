@@ -17,8 +17,9 @@
   (aproveita os docs atualizados e os VOs do M1).
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
-- **Milestone atual:** **M1** sobre Symfony. M1.1 (agregado `Company`) pronto,
-  não commitado. Próximo: **M1.2 — agregado `User` + `Role`**.
+- **Milestone atual:** **M1** sobre Symfony. M1.1 (`Company`) commitado
+  (`adba7db`). M1.2 (`User` + `Role`) pronto, não commitado. Próximo:
+  **M1.3 — autenticação (Symfony Security + `api_tokens`)**.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -59,7 +60,7 @@ Banco: `comandas` (dev) e `comandas_test` (testes). Volume novo cria os dois
 Mantido do M1 antigo: `Money`, `Ulid`, `Identifier` + `CompanyId`/`UserId`/`BranchId`,
 `CompanyContext`, `CompanyContextHolder` (ainda em `Domain/Identity`).
 
-### M1.1 — agregado Company (pronto, aguardando commit)
+### M1.1 — agregado Company (commit `adba7db`)
 | Entrega | Onde |
 |---|---|
 | `Company` (raiz) + `Branch` + `CompanyCapability`; enums `CompanyStatus`, `BranchStatus`, `Capability`; VO `Slug` | `src/Domain/Identity/` |
@@ -75,27 +76,43 @@ Mantido do M1 antigo: `Money`, `Ulid`, `Identifier` + `CompanyId`/`UserId`/`Bran
 
 Demo: `bin/console app:company:register "Bar do Zé" bar-do-ze --capability=tables --capability=kitchen`
 
+### M1.2 — agregados User e Role (pronto, aguardando commit)
+Decisões do usuário: login = **slug + e-mail + senha**; PIN = **escolhe o
+usuário, depois digita** (bcrypt, pode repetir); limite de desconto =
+**coluna `roles.max_discount_percent`** (`discount_limits` removida).
+
+| Entrega | Onde |
+|---|---|
+| `Role` (raiz) + `RolePermission`; enum `Permission` (36 códigos do doc 06); `RoleCode` | `src/Domain/Identity/` |
+| `DefaultRoles` — matriz do doc 06 §3 gerada da tabela do doc (9 papéis + limites) | `src/Domain/Identity/DefaultRoles.php` |
+| `User` (raiz) + `UserRole` (filial opcional); `User::can(Permission, ?BranchId)`, `maxDiscountIn()` | `src/Domain/Identity/` |
+| VOs `Email`, `Percentage` (centésimos, sem float) | `src/Domain/Identity/`, `src/Domain/Shared/` |
+| Porta `PasswordHasher` → `NativePasswordHasher` (symfony/password-hasher) | `src/Infrastructure/Security/` |
+| Tipos `StringValueType` (base de Slug/Email/RoleCode), `PercentageType`, `RoleIdType`, `UserRoleIdType` | `.../Doctrine/Type/` |
+| Repositórios `DoctrineUserRepository`, `DoctrineRoleRepository`; `CompanyRepository::getBySlug` | `.../Doctrine/Repository/` |
+| Migration users, roles, role_permissions, user_roles | `migrations/Version20261023213802.php` |
+| `RegisterCompany` cria os papéis padrão; caso de uso `RegisterUser`; CLI `app:user:register` | `src/Application/Identity/`, `src/Presentation/Console/Identity/` |
+| Testes: aceite M1 "WAITER 403 / CASHIER ok em command.close" (no Domain), escopo por filial, limites; integração RegisterUser — 54 verdes | `tests/` |
+
+Demo: `bin/console app:user:register bar-do-ze "Ana" ana@bar.com --role=CASHIER --role=WAITER@<branchId> --pin=1234`
+
 ---
 
 ## Próximos passos — M1 sobre Symfony
 
-1. ~~Agregado Company~~ (M1.1).
-2. **M1.2 — `User` + `Role`:** `User` (raiz) com coleção `UserRole`
-   (`id` próprio, `branch_id` NULL = empresa toda — doc 03 atualizado);
-   `Role` com permissões (`role_permissions`); `discount_limits`; e-mail único
-   por empresa; senha/PIN com `PasswordHasher` do Symfony atrás de uma porta.
-3. **`counters`** (numeração diária de comanda) — pode ficar para o M3, onde é usado.
-4. **Repositórios:** `UserRepository`, `RoleRepository` + adapters Doctrine.
-5. **Multiempresa:** filtro SQL do Doctrine (`CompanyFilter`) ativado com o
-   `CompanyContext` da requisição; mover `CompanyContextHolder` para
-   `Application` e implementar `ResetInterface` (seguro em worker).
-6. **Auth:** Symfony Security com `access_token` authenticator (hash sha256 em
-   `api_tokens`); `/health` público, `/api/*` protegido.
-7. **Permissões:** Voters a partir de `user_roles`/`role_permissions` (doc 06);
-   `CapabilityChecker`.
-8. **Seed:** comando `app:seed-demo` (ou DoctrineFixturesBundle).
-9. **Aceite:** teste de isolamento A×B, `WAITER` 403 / `CASHIER` 200,
-   `hotel` = false. CI ganha `services: mysql`.
+1. ~~Agregado Company~~ (M1.1). ~~User + Role~~ (M1.2).
+2. **M1.3 — Autenticação:** Symfony Security (`security-bundle`); tabela
+   `api_tokens` (hash sha256) + `access_token` authenticator; endpoints
+   `POST /api/login` (slug + e-mail + senha) e login por PIN (usuário + PIN);
+   `/health` público, `/api/*` protegido; `CompanyContext` montado no login.
+3. **M1.4 — Multiempresa:** filtro SQL do Doctrine (`CompanyFilter`) ligado com
+   o `CompanyContext`; `CompanyContextHolder` para `Application` com
+   `ResetInterface`. Aceite: usuário da empresa A não vê dado da B.
+4. **M1.5 — Autorização:** Voter que delega para `User::can()`;
+   `CapabilityChecker` (`hotel` = false na demo). Aceite HTTP: WAITER 403 /
+   CASHIER 200 em `command.close`.
+5. **M1.6 — Seed demo:** `app:seed-demo` (empresa + filial + 1 usuário por papel).
+6. **`counters`** (numeração diária de comanda) — fica para o M3, onde é usado.
 
 ---
 
@@ -111,7 +128,13 @@ Demo: `bin/console app:company:register "Bar do Zé" bar-do-ze --capability=tabl
   `DATABASE_URL` de Postgres no `.env` e criou `src/Entity`/`src/Repository`.
   Revisar `git status` depois de todo `composer require`. Recipes de Docker
   desligados (`extra.symfony.docker: false`).
-- **Doctrine + PHP 8.3:** entidade mapeada não pode ser `final` (proxy).
+- **Doctrine + PHP 8.3:** entidade mapeada não pode ser `final` (proxy), e o
+  `$id` não pode ser `readonly` ("Attempting to change readonly property ...::$id"
+  ao inicializar um proxy lazy-ghost).
+- **Enum em campo de PK** não é aceito no XML do Doctrine → guardar string e
+  converter na entidade (`RolePermission`).
+- **`findBy` por associação** com IDs tipados: passar o objeto (`CompanyId`),
+  não `->toString()` — o tipo DBAL rejeita string de propósito.
 - **Domain fora do container** → interface de porta precisa de alias explícito
   em `config/services.yaml`, senão "Cannot autowire ... has been excluded".
 - **DATETIME(6):** criar só um tipo novo deixava o diff eterno (introspecção lê
