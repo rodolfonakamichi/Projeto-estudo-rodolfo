@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-23. Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-23 (fim da sessão, após o M1.3). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -18,7 +18,7 @@
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
 - **Milestone atual:** **M1** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
-  M1.3 (autenticação) pronto, não commitado. Próximo: **M1.4 — multiempresa**.
+  M1.3 `7958884`. Próximo: **M1.4 — multiempresa** (nada em andamento).
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -95,7 +95,7 @@ usuário, depois digita** (bcrypt, pode repetir); limite de desconto =
 
 Demo: `bin/console app:user:register bar-do-ze "Ana" ana@bar.com --role=CASHIER --role=WAITER@<branchId> --pin=1234`
 
-### M1.3 — autenticação (pronto, aguardando commit)
+### M1.3 — autenticação (commit `7958884`)
 Decisões do usuário: **pareamento de aparelho** (token `d_` por filial, só
 lista usuários e troca PIN por token); token de usuário **expira 12h após o
 último uso**; **5 falhas / 15 min** por alvo+IP (senha e PIN).
