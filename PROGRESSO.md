@@ -17,7 +17,10 @@
   (aproveita os docs atualizados e os VOs do M1).
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
-- **Milestone atual:** M0 refeito (pronto) → começar **M1** sobre Symfony.
+- **Milestone atual:** **M1** sobre Symfony. M1.1 (agregado `Company`) pronto,
+  não commitado. Próximo: **M1.2 — agregado `User` + `Role`**.
+- **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
+  padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
 ## Como retomar o ambiente
 
@@ -31,8 +34,9 @@ docker compose exec php composer check             # cs, phpstan, deptrac, conta
 curl localhost:8080/health                          # {"status":"ok"}
 ```
 
-⚠️ O banco de dev ainda tem as 10 tabelas do Phinx + `phinxlog`. Antes da
-primeira migration Doctrine, zerar: `docker compose down -v && docker compose up -d`.
+Banco: `comandas` (dev) e `comandas_test` (testes). Volume novo cria os dois
+(`docker/mysql/init.sql`). Aplicar schema:
+`bin/console doctrine:migrations:migrate` e `... --env=test`.
 
 ---
 
@@ -55,18 +59,33 @@ primeira migration Doctrine, zerar: `docker compose down -v && docker compose up
 Mantido do M1 antigo: `Money`, `Ulid`, `Identifier` + `CompanyId`/`UserId`/`BranchId`,
 `CompanyContext`, `CompanyContextHolder` (ainda em `Domain/Identity`).
 
+### M1.1 — agregado Company (pronto, aguardando commit)
+| Entrega | Onde |
+|---|---|
+| `Company` (raiz) + `Branch` + `CompanyCapability`; enums `CompanyStatus`, `BranchStatus`, `Capability`; VO `Slug` | `src/Domain/Identity/` |
+| `Identifier` movido para `Domain/Shared`; `DomainException`, `Timestamped` | `src/Domain/Shared/` |
+| Porta `CompanyRepository` → `DoctrineCompanyRepository` (bind em `services.yaml`) | `src/Infrastructure/Persistence/Doctrine/Repository/` |
+| Tipos DBAL: IDs tipados (`IdentifierType` + subclasses), `SlugType`, override `datetime*` → DATETIME(6) UTC | `.../Doctrine/Type/` |
+| Mapeamento XML das 3 entidades | `.../Doctrine/Mapping/` |
+| `TimestampListener` (onFlush + `ClockInterface`) | `.../Doctrine/Listener/` |
+| Migration `companies`, `branches`, `company_capabilities` | `migrations/Version20261023212641.php` |
+| Caso de uso `RegisterCompany` + handler; CLI `app:company:register` | `src/Application/Identity/`, `src/Presentation/Console/Identity/` |
+| Testes: `CompanyTest`, `SlugTest` (unit), `RegisterCompanyTest` (bus→MySQL) — 31 verdes | `tests/` |
+| DAMA test bundle; banco `comandas_test`; CI com `services: mysql` + `schema:validate` | `phpunit.dist.xml`, `docker/mysql/`, `.github/workflows/ci.yml` |
+
+Demo: `bin/console app:company:register "Bar do Zé" bar-do-ze --capability=tables --capability=kitchen`
+
 ---
 
 ## Próximos passos — M1 sobre Symfony
 
-1. **Entidades** `Company`, `Branch`, `User`, `Role` em `src/Domain/Identity/`
-   (PHP puro) + mapeamento XML.
-2. **Tipos DBAL** para os IDs tipados (`CompanyIdType` etc., `CHAR(26)`) em
-   `Infrastructure/Persistence/Doctrine/Type/`, registrados no `doctrine.yaml`.
-3. **Migrations:** `make:migration` → revisar contra o doc 03 (as 10 tabelas
-   do M1: companies, branches, company_capabilities, counters, users, roles,
-   role_permissions, user_roles, discount_limits, api_tokens).
-4. **Repositórios:** interface no Domain (`UserRepository`) + `DoctrineUserRepository`.
+1. ~~Agregado Company~~ (M1.1).
+2. **M1.2 — `User` + `Role`:** `User` (raiz) com coleção `UserRole`
+   (`id` próprio, `branch_id` NULL = empresa toda — doc 03 atualizado);
+   `Role` com permissões (`role_permissions`); `discount_limits`; e-mail único
+   por empresa; senha/PIN com `PasswordHasher` do Symfony atrás de uma porta.
+3. **`counters`** (numeração diária de comanda) — pode ficar para o M3, onde é usado.
+4. **Repositórios:** `UserRepository`, `RoleRepository` + adapters Doctrine.
 5. **Multiempresa:** filtro SQL do Doctrine (`CompanyFilter`) ativado com o
    `CompanyContext` da requisição; mover `CompanyContextHolder` para
    `Application` e implementar `ResetInterface` (seguro em worker).
@@ -92,6 +111,15 @@ Mantido do M1 antigo: `Money`, `Ulid`, `Identifier` + `CompanyId`/`UserId`/`Bran
   `DATABASE_URL` de Postgres no `.env` e criou `src/Entity`/`src/Repository`.
   Revisar `git status` depois de todo `composer require`. Recipes de Docker
   desligados (`extra.symfony.docker: false`).
+- **Doctrine + PHP 8.3:** entidade mapeada não pode ser `final` (proxy).
+- **Domain fora do container** → interface de porta precisa de alias explícito
+  em `config/services.yaml`, senão "Cannot autowire ... has been excluded".
+- **DATETIME(6):** criar só um tipo novo deixava o diff eterno (introspecção lê
+  DATETIME). Solução: sobrescrever `datetime`/`datetime_immutable` do DBAL.
+- **Recipes contrib** (ex.: DAMA) não rodam (`allow-contrib: false`): registrar
+  bundle em `config/bundles.php` e config à mão.
+- **DBAL 4:** `ConversionException::conversionFailed` não existe mais →
+  `Types\Exception\ValueNotConvertible::new()`.
 - **PHPStan** lê o container compilado (`var/cache/dev/...xml`): rodar
   `bin/console cache:warmup` antes se o cache estiver limpo. Cache velho depois
   de `composer require` → `vendor/bin/phpstan clear-result-cache`.

@@ -27,9 +27,11 @@ interfaces de repositório, máquinas de estado. PHP puro, testável sem kernel.
 **Fora do container** do Symfony (`config/services.yaml` exclui a pasta):
 entidade e VO nascem com `new`/named constructor, nunca por injeção.
 
-- `Domain/Shared/` — `Money`, `Ulid`, interface `DomainEvent`.
-- `Domain/Identity/` — IDs tipados (`CompanyId`, `UserId`, `BranchId`),
-  `CompanyContext`.
+- `Domain/Shared/` — `Money`, `Ulid`, `Identifier` (base dos IDs tipados),
+  `DomainException`, interfaces `DomainEvent` e `Timestamped`.
+- `Domain/Identity/` — agregado `Company` (+ `Branch`, `CompanyCapability`),
+  `Slug`, enums de status/capability, IDs tipados, `CompanyContext`, porta
+  `CompanyRepository`.
 - Adiante: `Catalog/`, `Command/`, `Order/`, `Payment/`, `Production/`, `Inventory/`.
 
 ### `Application/`
@@ -50,8 +52,14 @@ Adapters concretos:
   Messenger). Cada comando roda numa transação do Doctrine.
 - `Infrastructure/Persistence/Doctrine/Mapping/` — mapeamento **XML** das
   entidades do Domain (`Identity.Company.orm.xml` ↔ `App\Domain\Identity\Company`).
+- `Infrastructure/Persistence/Doctrine/Type/` — tipos DBAL: IDs tipados ⇄
+  CHAR(26), `Slug`, e o override de `datetime*` para DATETIME(6) UTC.
+- `Infrastructure/Persistence/Doctrine/Repository/` — adapters dos
+  repositórios do Domain (`DoctrineCompanyRepository`). Ligação porta → adapter
+  em `config/services.yaml`.
+- `Infrastructure/Persistence/Doctrine/Listener/` — `TimestampListener`.
 - `Infrastructure/Health/` — `DbalDatabaseProbe`.
-- Adiante: repositórios Doctrine, tipos DBAL dos IDs, gateway PIX, outbox.
+- Adiante: gateway PIX, outbox.
 
 ### `Presentation/`
 Entrada e saída:

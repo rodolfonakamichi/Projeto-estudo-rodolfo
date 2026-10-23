@@ -35,8 +35,10 @@ arquitetural com contexto/consequência fica nas ADRs (`docs/dominio/00-...`).
   Symfony em `src/Domain` (ADR-002/012).
 - Gerar esqueleto com o **Maker** (`make:command`, `make:test`,
   `make:migration`...) e então mover/ajustar para a camada certa.
-- `final` por padrão em classes (VOs, entidades, casos de uso, serviços).
-  Abrir para herança só com motivo.
+- `final` por padrão em classes (VOs, casos de uso, serviços).
+  Abrir para herança só com motivo. **Exceção: entidades mapeadas pelo
+  Doctrine** não são `final` — no PHP 8.3 o lazy loading gera um *proxy* que
+  estende a classe (no PHP 8.4 os *lazy objects* nativos resolvem isso).
 - Value Objects: imutáveis (`readonly`), construtor privado + *named
   constructors* (`fromCents`, `fromString`), igualdade por valor (`equals`).
 

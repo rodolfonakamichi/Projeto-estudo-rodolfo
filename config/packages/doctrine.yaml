@@ -4,6 +4,16 @@ doctrine:
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
+        # Tipos próprios: IDs tipados do Domain ⇄ CHAR(26), Slug, DATETIME(6)
+        types:
+            company_id: App\Infrastructure\Persistence\Doctrine\Type\CompanyIdType
+            branch_id: App\Infrastructure\Persistence\Doctrine\Type\BranchIdType
+            user_id: App\Infrastructure\Persistence\Doctrine\Type\UserIdType
+            company_capability_id: App\Infrastructure\Persistence\Doctrine\Type\CompanyCapabilityIdType
+            slug: App\Infrastructure\Persistence\Doctrine\Type\SlugType
+            # sobrescrevem os nativos: toda data do projeto é DATETIME(6) UTC
+            datetime: App\Infrastructure\Persistence\Doctrine\Type\DateTimeMicrosecondsType
+            datetime_immutable: App\Infrastructure\Persistence\Doctrine\Type\DateTimeImmutableMicrosecondsType
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true

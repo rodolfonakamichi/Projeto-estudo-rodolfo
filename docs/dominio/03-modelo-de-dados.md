@@ -60,11 +60,16 @@ migration final.
 | role_id | CHAR(26) FK | permission VARCHAR(60) | `PRIMARY KEY (role_id, permission)` |
 
 ### `user_roles`
-| user_id | CHAR(26) FK | role_id | CHAR(26) FK | branch_id CHAR(26) NOT NULL DEFAULT `''` | `PRIMARY KEY (user_id, role_id, branch_id)` |
+| id | CHAR(26) PK |
+| user_id | CHAR(26) FK → users |
+| role_id | CHAR(26) FK → roles |
+| branch_id | CHAR(26) NULL FK → branches | `NULL` = papel válido em **toda a empresa** |
+| — | | `UNIQUE (user_id, role_id, branch_id)` |
 
-> `branch_id = ''` (string vazia) significa **papel válido em toda a empresa**;
-> um ULID real limita o papel àquela filial. Sentinela em vez de `NULL` porque
-> parte de PK não pode ser nula no MySQL (erro 1171).
+> Chave própria (ULID) em vez da PK composta com sentinela `''`: `branch_id`
+> vira FK de verdade e o mapeamento Doctrine fica simples. Como o MySQL aceita
+> vários `NULL` num índice único, a duplicidade de papel "empresa toda" é
+> barrada pelo agregado `User` (que tem a coleção de papéis), não pelo banco.
 
 ### `discount_limits`
 | id | CHAR(26) PK | company_id | role_code VARCHAR(30) | max_percent DECIMAL(5,2) NULL (`NULL` = sem limite) | `UNIQUE (company_id, role_code)` |
@@ -342,3 +347,4 @@ payments 1─0..1 cash_movements
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-08-30 | `user_roles.branch_id` NOT NULL DEFAULT `''` (sentinela, era NULL na PK). Adicionada `api_tokens` (auth por bearer token, M1.f). |
 | 2026-10-23 | Migrations passam a ser Doctrine Migrations (ADR-012). |
+| 2026-10-23 | `user_roles` ganha `id` próprio; `branch_id` vira FK nullable (`NULL` = empresa toda), unicidade garantida pelo agregado `User`. Datas: DATETIME(6) via tipos sobrescritos do DBAL. |

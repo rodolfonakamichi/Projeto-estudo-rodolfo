@@ -40,5 +40,7 @@
     </source>
 
     <extensions>
+        <!-- cada teste roda numa transação desfeita no fim: banco de teste sempre limpo -->
+        <bootstrap class="DAMA\DoctrineTestBundle\PHPUnit\PHPUnitExtension"/>
     </extensions>
 </phpunit>

@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Identity;
-
-use App\Domain\Shared\Ulid;
+namespace App\Domain\Shared;
 
 /**
  * Base dos identificadores tipados (CompanyId, UserId, BranchId...).

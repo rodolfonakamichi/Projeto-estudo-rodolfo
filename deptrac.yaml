@@ -21,11 +21,12 @@ deptrac:
       collectors:
         - type: directory
           value: src/Presentation/.*
-    # Única lib de terceiro permitida no Domain (ADR-005, embrulhada em App\Domain\Shared\Ulid)
-    - name: SymfonyUid
+    # Libs de terceiro permitidas no Domain (ADR-012): symfony/uid (embrulhada
+    # em Domain\Shared\Ulid) e doctrine/collections (só estrutura de dados).
+    - name: DomainLibs
       collectors:
         - type: classLike
-          value: ^Symfony\\Component\\Uid\\.*
+          value: ^(Symfony\\Component\\Uid|Doctrine\\Common\\Collections)\\.*
     - name: Vendor
       collectors:
         - type: bool
@@ -34,16 +35,16 @@ deptrac:
               value: ^(Symfony|Doctrine|Psr)\\.*
           must_not:
             - type: classLike
-              value: ^Symfony\\Component\\Uid\\.*
+              value: ^(Symfony\\Component\\Uid|Doctrine\\Common\\Collections)\\.*
   ruleset:
     Domain:
-      - SymfonyUid
+      - DomainLibs
     Application:
       - Domain
     Infrastructure:
       - Domain
       - Application
-      - SymfonyUid
+      - DomainLibs
       - Vendor
     Presentation:
       - Application

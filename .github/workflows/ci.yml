@@ -9,6 +9,21 @@ jobs:
   checks:
     runs-on: ubuntu-latest
 
+    # Testes de integração usam MySQL de verdade (banco comandas_test)
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s --health-timeout=3s --health-retries=20
+
+    env:
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/comandas?serverVersion=8.4.0&charset=utf8mb4
+
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +74,14 @@ jobs:
 
       - name: Lint do container
         run: bin/console lint:container
+
+      - name: Banco de teste (cria + migrations)
+        run: |
+          bin/console doctrine:database:create --env=test --if-not-exists
+          bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Schema bate com o mapeamento
+        run: bin/console doctrine:schema:validate --env=test
 
       - name: PHPUnit
         run: bin/phpunit

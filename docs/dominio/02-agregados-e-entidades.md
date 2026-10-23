@@ -204,21 +204,17 @@ sistema calcula `difference` e gera alerta se ≠ 0 (seção 43).
 
 ## 5. Nota de estudo — "por que não mapear a linha do banco direto para um objeto?"
 
-Sem ORM (ADR-011), a tentação é ter uma classe "registro" com getters/setters
-públicos que espelha a tabela e é o que o repositório devolve. Mas:
-- ela teria setter para tudo → não protege invariante nenhuma;
-- misturar "como está no banco" com "o que a regra permite" espalha `if` de
-  validação por toda parte.
+A tentação é ter uma classe "registro" com getters/setters públicos que espelha
+a tabela. Mas ela teria setter para tudo → não protege invariante nenhuma, e a
+validação se espalha em `if` pelo código.
 
-Então: a **entidade de domínio** (`Domain\Command\Command`) é uma classe PHP
-pura, com estado privado e métodos que garantem as regras. O **repositório**
-(`Infrastructure\Persistence\Repositories\PdoCommandRepository`) faz o SQL e um
-**mapeador** traduz `array` de linhas ⇄ entidade. Custa um mapeamento a mais — e
-é exatamente o que você quer praticar neste projeto.
-
-Se em algum ponto isso ficar pesado demais para o MVP, a alternativa honesta é
-"objeto de persistência com regras nos métodos + testes com banco" — mas aí
-registre como novo ADR revisando a ADR-002.
+Então: a **entidade de domínio** (`Domain\Identity\Company`) é uma classe PHP
+pura, com estado privado e métodos que garantem as regras (`addBranch`,
+`deactivateBranch`). O **Doctrine** (padrão *Data Mapper*, ADR-012) lê o
+mapeamento XML em `Infrastructure/Persistence/Doctrine/Mapping` e preenche as
+propriedades privadas direto, sem passar por construtor nem setter. A entidade
+não sabe que existe banco; o **repositório** (`DoctrineCompanyRepository`)
+implementa a interface do Domain.
 
 ---
 
@@ -230,3 +226,4 @@ registre como novo ADR revisando a ADR-002.
 | 2026-08-29 | Nota de estudo §5 reescrita para PDO + mapeador (ADR-011), sem Eloquent. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-10-23 | Nota §5 reescrita para Doctrine Data Mapper (ADR-012). Agregado `Company` implementado no M1. |

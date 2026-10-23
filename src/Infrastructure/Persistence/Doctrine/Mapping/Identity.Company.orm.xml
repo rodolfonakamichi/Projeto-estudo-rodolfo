@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mapeamento de App\Domain\Identity\Company ⇄ tabela companies (doc 03 §1). -->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Identity\Company" table="companies">
+        <unique-constraints>
+            <unique-constraint name="uniq_companies_slug" columns="slug"/>
+        </unique-constraints>
+
+        <id name="id" type="company_id"/>
+
+        <field name="name" length="150"/>
+        <field name="slug" type="slug"/>
+        <field name="status" length="30" enum-type="App\Domain\Identity\CompanyStatus"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+        <field name="updatedAt" column="updated_at" type="datetime_immutable"/>
+
+        <!-- Filiais e capabilities vivem e morrem com a Company (agregado). -->
+        <one-to-many field="branches" target-entity="App\Domain\Identity\Branch" mapped-by="company">
+            <cascade><cascade-persist/></cascade>
+        </one-to-many>
+        <one-to-many field="capabilities" target-entity="App\Domain\Identity\CompanyCapability" mapped-by="company">
+            <cascade><cascade-persist/></cascade>
+        </one-to-many>
+    </entity>
+</doctrine-mapping>

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Domain\Identity;
+namespace App\Tests\Domain\Shared;
 
 use App\Domain\Identity\CompanyId;
 use App\Domain\Identity\UserId;

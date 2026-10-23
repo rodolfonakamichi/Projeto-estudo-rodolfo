@@ -98,7 +98,8 @@ Fora de `src/`: `bin/console` (CLI), `database/migrations` e `database/seeds`
 **Regra de dependência:** `Presentation → Application → Domain`.
 `Infrastructure` implementa interfaces definidas no `Domain`/`Application`.
 `Domain` não importa nada das outras camadas nem de pacote de terceiros
-(exceção: `symfony/uid`, embrulhado em `Domain\Shared\Ulid`).
+(exceções: `symfony/uid`, embrulhado em `Domain\Shared\Ulid`, e
+`doctrine/collections`, só como estrutura de dados — ADR-012).
 Verificado no CI pelo **Deptrac** (`deptrac.yaml`).
 
 **Consequências.**
@@ -354,6 +355,25 @@ projeto** usando as ferramentas atuais do ecossistema.
 - ⚠️ As migrations Phinx do M1 (branch `m1-identidade`) foram descartadas e são
   refeitas como migrations Doctrine a partir das entidades.
 
+**Detalhes decididos ao implementar o M1 (2026-10-23):**
+- **`doctrine/collections` liberado no Domain.** Agregado com filhos
+  (`Company` → `Branch[]`) precisa de `Collection` para o Doctrine mapear o
+  one-to-many. É só estrutura de dados; a coleção nunca sai da entidade — para
+  fora, só `list<...>`. Deptrac permite (`DomainLibs`).
+- **Entidades mapeadas não são `final`** (PHP 8.3: o proxy de lazy loading
+  estende a classe). VOs, handlers e serviços continuam `final`.
+- **Toda data é `DATETIME(6)` UTC.** Os tipos nativos `datetime` e
+  `datetime_immutable` do DBAL são sobrescritos (`Infrastructure/Persistence/
+  Doctrine/Type`) — vale para todas as tabelas, inclusive a de controle do
+  Doctrine Migrations, e o diff de migration fica estável.
+- **Timestamps pelo Doctrine**: o Domain não lê relógio; entidades
+  `Timestamped` recebem `touch($now)` de um listener `onFlush` com
+  `ClockInterface` injetado (congelável em teste).
+- **Porta → adapter explícito** em `config/services.yaml` (o Domain fica fora
+  do container, então o autowiring não liga a interface sozinho).
+- **Testes de integração** com MySQL real (`comandas_test`), cada teste numa
+  transação desfeita no fim (`dama/doctrine-test-bundle`).
+
 ---
 
 ## O que está EXPLICITAMENTE fora do MVP
@@ -379,3 +399,4 @@ projeto** usando as ferramentas atuais do ecossistema.
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | ADR-012: Symfony 7.4 LTS + Doctrine ORM (XML) + Doctrine Migrations + Messenger. Substitui a ADR-011; revisa a tabela de libs da ADR-002. |
+| 2026-10-23 | ADR-012 detalhada no M1: `doctrine/collections` no Domain, entidades não-`final`, DATETIME(6) global por override dos tipos do DBAL, timestamps por listener, porta→adapter explícito. |
