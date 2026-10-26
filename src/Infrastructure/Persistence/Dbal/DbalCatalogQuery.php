@@ -17,6 +17,7 @@ use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 
 /**
  * Read model do catálogo: SQL direto, `company_id` sempre no WHERE (o filtro do
@@ -79,6 +80,29 @@ final readonly class DbalCatalogQuery implements CatalogQuery
         );
 
         return $this->assemble($rows)[0] ?? null;
+    }
+
+    public function search(CompanyId $companyId, BranchId $branchId, string $text, int $limit = 20): array
+    {
+        $terms = FulltextQuery::fromUserInput($text);
+        if (null === $terms) {
+            return [];
+        }
+
+        // MATCH no WHERE usa o índice ft_products_name; o mesmo MATCH no ORDER BY é a relevância
+        $rows = $this->db->fetchAllAssociative(<<<'SQL'
+            SELECT id, name, category_id, station_id, track_stock, is_active
+              FROM products
+             WHERE company_id = :company AND branch_id = :branch AND is_active = 1
+               AND MATCH (name) AGAINST (:terms IN BOOLEAN MODE)
+             ORDER BY MATCH (name) AGAINST (:terms IN BOOLEAN MODE) DESC, name
+             LIMIT :limit
+            SQL,
+            ['company' => $companyId->toString(), 'branch' => $branchId->toString(), 'terms' => $terms, 'limit' => $limit],
+            ['limit' => ParameterType::INTEGER],
+        );
+
+        return $this->assemble($rows);
     }
 
     /**

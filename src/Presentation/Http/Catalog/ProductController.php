@@ -59,6 +59,17 @@ final readonly class ProductController
         )]);
     }
 
+    /** Busca rápida (doc 07, M2.4): `?q=cho` acha "Chopp". Prefixo de palavra, mínimo 3 letras. */
+    #[Route('/branches/{branchId}/catalog/search', methods: ['GET'], requirements: ['branchId' => Requirement::ULID])]
+    public function search(#[CurrentUser] AuthenticatedUser $user, string $branchId, #[MapQueryParameter] string $q = ''): JsonResponse
+    {
+        return new JsonResponse(['products' => $this->catalog->search(
+            CompanyId::fromString($user->companyId),
+            BranchId::fromString($branchId),
+            mb_substr($q, 0, 100),
+        )]);
+    }
+
     #[Route('/products/{productId}', methods: ['GET'], requirements: ['productId' => Requirement::ULID])]
     public function show(#[CurrentUser] AuthenticatedUser $user, string $productId): JsonResponse
     {

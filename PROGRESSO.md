@@ -1,8 +1,8 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M2.3 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M2.4 implementado na branch `feat/m2.4-busca`, aguardando revisão/commit/PR). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
-> **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
+> **Ao retomar: ler este arquivo primeiro**, depois `git switch main && git pull` e
 > `docker compose up -d`.
 
 ---
@@ -13,12 +13,14 @@
   (kernel PSR-7/15, php-di, Phinx, PDO). Entrou **Symfony 7.4 LTS + Doctrine
   ORM (mapeamento XML) + Doctrine Migrations + Messenger**, com foco em SOLID e
   padrões de projeto.
-- **Branch de trabalho:** `symfony`, criado a partir de `m1-identidade`
-  (aproveita os docs atualizados e os VOs do M1).
-- **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
-  (migrations Phinx — descartadas, ficam só no histórico).
+- **Fluxo de branches (2026-10-26):** cada sub-passo numa branch própria criada
+  da **`main`** (`feat/m2.4-busca`, `fix/...`, `docs/...`); o usuário commita,
+  faz push e junta por **PR no GitHub** (PR #5 = M2.3). A `symfony` (onde
+  M1→M2.2 foram feitos) está toda na `main` e não é mais usada.
+- Histórico antigo: `m1-identidade` = `f68f4f0` (migrations Phinx descartadas).
 - **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 `c8a19e3`.
-  M2.3 implementado (não commitado). Próximo: **M2.4 — busca**.
+  M2.3 `1db325a` (PR #5). M2.4 implementado em `feat/m2.4-busca` (não commitado).
+  Próximo: **M2.5 — atalhos do operador**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -28,13 +30,14 @@
 
 ```bash
 cd ~/PhpstormProjects/Projeto-estudo-rodolfo
-git switch symfony
+git switch main && git pull
 docker compose up -d
 docker compose exec php composer install
 docker compose exec php bin/console app:health     # PHP 8.3 / MySQL 8.4 / OK
 docker compose exec php composer check             # cs, phpstan, deptrac, container, phpunit
 curl localhost:8080/health                          # {"status":"ok"}
 docker compose exec php bin/console app:seed-demo   # empresa demo (senha demo1234, PIN 1234)
+docker compose exec php bin/console app:seed-demo-catalog --extra=1000   # cardápio + 1k produtos
 ```
 
 Banco: `comandas` (dev) e `comandas_test` (testes). Volume novo cria os dois
@@ -181,7 +184,7 @@ Decisão do usuário: grupos de modificadores **por produto** (como o doc 03).
 | Migration products, product_variants, modifier_groups, modifiers | `migrations/Version20261026202617.php` |
 | Testes: aceite Chopp 300/500ml e X-Burger Ponto(1)/Adicionais(0–5) no Domain, invariantes, ida e volta no MySQL — 111 verdes | `tests/Domain/Catalog/`, `tests/Integration/Catalog/` |
 
-### M2.3 — API de produto (não commitado)
+### M2.3 — API de produto (commit `1db325a`, PR #5)
 Regra tomada (doc 06): operação que **define valor** exige `catalog.price.manage`
 além de `catalog.product.manage`.
 
@@ -194,6 +197,16 @@ além de `catalog.product.manage`.
 | API: `GET/POST /api/branches/{id}/products[?categoryId=]`, `GET/PATCH /api/products/{id}`, `POST .../variants`, `PATCH .../variants/{id}`, `POST .../modifier-groups`, `PATCH .../modifier-groups/{id}`, `POST .../modifiers`, `PATCH .../modifiers/{id}` — respostas devolvem o produto atualizado | `src/Presentation/Http/Catalog/ProductController.php` |
 | Testes: aceites Chopp/X-Burger pela API, 422 com mensagem do Domain, preço × papel "CARDAPISTA", PATCH ausente × null, isolamento — 119 verdes | `tests/Presentation/Http/Catalog/ProductApiTest.php` |
 
+### M2.4 — busca (branch `feat/m2.4-busca`, não commitado)
+| Entrega | Onde |
+|---|---|
+| Índice `FULLTEXT ft_products_name` + migration | `Catalog.Product.orm.xml`, `migrations/Version20261026203908.php` |
+| `FulltextQuery`: texto do usuário → modo booleano (`cho` → `+cho*`; palavras < 3 letras e operadores saem) | `src/Infrastructure/Persistence/Dbal/` |
+| `CatalogQuery::search()` (só ativos, por relevância, limite 20) | `DbalCatalogQuery` |
+| `GET /api/branches/{id}/catalog/search?q=` | `ProductController` |
+| `app:seed-demo-catalog [--extra=N]`: cardápio real (Chopp, X-Burger, Caipirinha...) + N sintéticos, pelos casos de uso | `src/Presentation/Console/Demo/` |
+| Testes: unit do `FulltextQuery`; aceite "Chopp em < 50 ms com 1k" (mediana de 5) + `EXPLAIN` usa o índice — commitando de verdade (`#[SkipDatabaseRollback]`) — 128 verdes | `tests/Infrastructure/`, `tests/Presentation/Http/Catalog/CatalogSearchTest.php` |
+
 ---
 
 ## Próximos passos — M2 (Catálogo)
@@ -201,7 +214,7 @@ além de `catalog.product.manage`.
 1. ~~M2.1 — estações e categorias~~.
 2. ~~M2.2 — agregado `Product`~~.
 3. ~~M2.3 — API de produto~~.
-4. **M2.4 — busca** `GET /catalog/search?q=` (FULLTEXT) + seed de 1k produtos, < 50 ms.
+4. ~~M2.4 — busca~~.
 5. **M2.5 — atalhos do operador** (só estrutura).
 
 ## Histórico de próximos passos — M1 sobre Symfony
@@ -266,6 +279,11 @@ além de `catalog.product.manage`.
   tabela no `postGenerateSchemaTable` faz o ORM recriar o schema e as tabelas
   seguintes perdem o charset (`DEFAULT CHARACTER SET` some da migration).
 - **Rota com `Requirement::ULID`**: ID malformado vira 404 antes do controller.
+- **FULLTEXT só enxerga dado COMMITADO** (o InnoDB atualiza o índice no
+  commit). Teste de busca: `#[SkipDatabaseRollback]` + limpeza no `tearDown`
+  (apagar `products` antes da empresa: FK para categoria/estação é RESTRICT).
+- **FULLTEXT ignora palavras < 3 letras** (`innodb_ft_min_token_size`) e não acha
+  pedaço do meio da palavra (`hop` ≠ Chopp). Se precisar: parser `ngram`.
 - **Teste HTTP + container:** depois de uma requisição, o container do teste
   guarda o contexto/filtro da empresa logada até o próximo request. Preparar
   dados de OUTRA empresa antes da 1ª requisição (no `setUp`).

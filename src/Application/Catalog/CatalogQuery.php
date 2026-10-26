@@ -26,4 +26,12 @@ interface CatalogQuery
     public function products(CompanyId $companyId, BranchId $branchId, ?CategoryId $categoryId = null): array;
 
     public function product(CompanyId $companyId, ProductId $productId): ?ProductView;
+
+    /**
+     * Busca rápida por nome (lançamento no PWA): só produtos ativos, mais
+     * relevantes primeiro. Texto sem palavra pesquisável → lista vazia.
+     *
+     * @return list<ProductView>
+     */
+    public function search(CompanyId $companyId, BranchId $branchId, string $text, int $limit = 20): array;
 }
