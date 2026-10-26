@@ -18,7 +18,7 @@
 | `Category` | — | Nome único por filial; arquivada não muda. |
 | `Station` | — | Nome único por filial; só com a capability `kitchen`. |
 | `OperatorFavorites` | `FavoriteProduct[]` | Uma lista por operador e filial; até 30, sem repetir, na ordem dele. |
-| `Location` | — | Código de QR único por empresa. |
+| `Location` | — | Rótulo único por filial; `TABLE` só com `tables`, `ROOM` só com `hotel`. (QR único por empresa: milestone do QR.) |
 | `Command` | `CommandItem[]`, `Discount[]`, `BillSplit?` | Total = Σ itens − descontos; só fecha se saldo = 0; item não some, é cancelado. |
 | `Order` | `OrderItem[]` | Pertence a 1 comanda aberta; não pode ser enviado vazio. |
 | `ProductionTicket` | `ProductionTicketItem[]` | Roteado para exatamente 1 estação; segue a máquina de estados. |
@@ -233,3 +233,4 @@ implementa a interface do Domain.
 | 2026-10-23 | `Role` vira agregado próprio (permissões + limite de desconto). `User` guarda `UserRole[]` com filial opcional. |
 | 2026-10-26 | M2: `Product` sempre com ≥1 variação (sem preço próprio); `Station` como agregado; Catálogo referencia outros agregados por ID. |
 | 2026-10-26 | M2.5: agregado `OperatorFavorites`. |
+| 2026-10-26 | M3.1: `Location` implementado (contexto Atendimento, `App\\Domain\\Attendance`). |

@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M2.5 implementado na branch `feat/m2.5-atalhos-operador`, aguardando commit/PR — fecha o M2). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M3.1 implementado na branch `feat/m3.1-mesas`, aguardando commit/PR). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch main && git pull` e
 > `docker compose up -d`.
@@ -19,8 +19,9 @@
   M1→M2.2 foram feitos) está toda na `main` e não é mais usada.
 - Histórico antigo: `m1-identidade` = `f68f4f0` (migrations Phinx descartadas).
 - **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 `c8a19e3`.
-  M2.3 `1db325a` (PR #5). M2.4 `208b2db` (PR #6). M2.5 implementado em
-  `feat/m2.5-atalhos-operador` (não commitado) — **fecha o M2**. Próximo: **M3 — Comanda + Pedido**.
+  M2.3 `1db325a` (PR #5). M2.4 `208b2db` (PR #6). M2.5 `1a6269c` (PR #7) — **M2 concluído**.
+- **M3 — Comanda + Pedido** em andamento: M3.1 (mesas) implementado em
+  `feat/m3.1-mesas` (não commitado). Próximo: **M3.2 — comanda**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -207,7 +208,7 @@ além de `catalog.product.manage`.
 | `app:seed-demo-catalog [--extra=N]`: cardápio real (Chopp, X-Burger, Caipirinha...) + N sintéticos, pelos casos de uso | `src/Presentation/Console/Demo/` |
 | Testes: unit do `FulltextQuery`; aceite "Chopp em < 50 ms com 1k" (mediana de 5) + `EXPLAIN` usa o índice — commitando de verdade (`#[SkipDatabaseRollback]`) — 128 verdes | `tests/Infrastructure/`, `tests/Presentation/Http/Catalog/CatalogSearchTest.php` |
 
-### M2.5 — atalhos do operador (branch `feat/m2.5-atalhos-operador`, não commitado)
+### M2.5 — atalhos do operador (commit `1a6269c`, PR #7)
 Decisões do usuário: favoritos **por operador e filial**; endpoint de atalhos já
 no formato final (`recent`/`topSelling` vazios até o M3); o fix abaixo vai junto.
 
@@ -222,9 +223,38 @@ no formato final (`recent`/`topSelling` vazios até o M3); o fix abaixo vai junt
 | Migration operator_favorites, operator_favorite_items | `migrations/Version20261026205421.php` |
 | Testes: unit do agregado, API (reordenar, lista por pessoa, inativo some, 403 cozinha, 404 outra empresa) — 136 verdes | `tests/` |
 
+### M3.1 — mesas / locais (branch `feat/m3.1-mesas`, não commitado)
+Decisões do usuário para o M3 (2026-10-26): **mesas cadastradas** (comanda de
+mesa aponta para `Location`); **quantidade inteira** no MVP; desconto **na
+comanda e no item**. Contexto novo `App\Domain\Attendance` ("Atendimento"; a
+classe da comanda será `Command`, como no doc 01 — alias onde colidir com o
+`Command` do bus).
+
+| Entrega | Onde |
+|---|---|
+| Agregado `Location` + `LocationType` (TABLE exige `tables`, ROOM exige `hotel`) | `src/Domain/Attendance/` |
+| Permissão nova `admin.location.manage` (OWNER/ADMIN/MANAGER) + migration de dados | `Permission`, `DefaultRoles`, doc 06 |
+| `CreateLocation`, `UpdateLocation`; read model `AttendanceQuery` → `DbalAttendanceQuery` | `src/Application/Attendance/`, `.../Dbal/` |
+| API: `GET/POST /api/branches/{id}/locations`, `PATCH /api/locations/{id}` | `src/Presentation/Http/Attendance/` |
+| `app:seed-demo-catalog` também cria Balcão + Mesa 1–10 | `SeedDemoCatalogCommand` |
+| Migration `locations` + dados da permissão | `migrations/Version20261026210436.php` |
+| Testes: unit de `Location`, API (capability por tipo, rótulo único, 403, 404) — 143 verdes | `tests/` |
+
 ---
 
-## Próximos passos — M2 (Catálogo)
+## Próximos passos — M3 (Comanda + Pedido)
+
+1. ~~M3.1 — mesas~~.
+2. **M3.2 — comanda**: abrir (vínculo MESA → `Location`, uma comanda aberta por
+   mesa, `display_number` via `counters`, data operacional), lançar item (preço e
+   modificadores validados pelo `Product` e **copiados**), mudar quantidade,
+   cancelar item (não some), totais, `close()` exige saldo zero; API.
+3. **M3.3 — outbox + audit_log** (`domain_events`, `audit_logs`).
+4. **M3.4 — descontos** (comanda e item; faixa do papel; pendente → gerente autoriza).
+5. **M3.5 — pedido** (`Order`) + `SendPendingItemsToKitchen`.
+6. **M3.6 — `Idempotency-Key`** nos endpoints de escrita.
+
+## Histórico de próximos passos — M2 (Catálogo)
 
 1. ~~M2.1 — estações e categorias~~.
 2. ~~M2.2 — agregado `Product`~~.

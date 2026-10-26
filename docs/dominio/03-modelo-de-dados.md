@@ -174,7 +174,10 @@ migration final.
 ## 3. Atendimento / Comanda
 
 ### `locations`
-| id | CHAR(26) PK | company_id | branch_id | type VARCHAR(20) (`TABLE`,`COUNTER`,`ROOM`,`EVENT_AREA`) | label VARCHAR(60) (`Mesa 12`) | qr_code VARCHAR(40) | is_active TINYINT(1) | `UNIQUE (company_id, qr_code)` |
+| id | CHAR(26) PK | company_id | branch_id | type VARCHAR(20) (`TABLE`,`COUNTER`,`ROOM`,`EVENT_AREA`) | label VARCHAR(60) (`Mesa 12`) | qr_code VARCHAR(40) | is_active TINYINT(1) | created_at, updated_at | `UNIQUE (company_id, qr_code)`, `UNIQUE (branch_id, label)` |
+
+> M3.1: criada **sem `qr_code`** (entra com o milestone do QR). `TABLE` exige a
+> capability `tables`; `ROOM`, a `hotel`. Local não se apaga: desativa.
 
 ### `customers`
 | id | CHAR(26) PK | company_id | name VARCHAR(150) | phone VARCHAR(20) NULL | document VARCHAR(20) NULL | `INDEX (company_id, phone)` |
@@ -220,7 +223,7 @@ migration final.
 | product_variant_id | CHAR(26) FK | sempre preenchido (todo produto tem variação) |
 | product_name | VARCHAR(150) | **cópia** no momento do lançamento |
 | unit_price_cents | BIGINT | **cópia** (não muda se o cardápio mudar) |
-| quantity | DECIMAL(10,3) | |
+| quantity | INT | inteira no MVP (decisão 2026-10-26); fração/peso quando houver venda por kg |
 | modifiers_total_cents | BIGINT | soma dos deltas |
 | line_total_cents | BIGINT | `(unit_price + modifiers_total) * quantity` |
 | notes | VARCHAR(255) NULL | |
@@ -394,3 +397,4 @@ payments 1─0..1 cash_movements
 | 2026-10-26 | M2.2: `modifier_groups` sem `is_required` (derivado de `min_select`), grupos por produto; nomes únicos por produto/grupo; `products` com `INDEX (branch_id, is_active)` e timestamps. |
 | 2026-10-26 | M2.4: `FULLTEXT ft_products_name (name)` criado; busca em modo booleano por prefixo de palavra (mín. 3 letras). |
 | 2026-10-26 | M2.5: `operator_favorites` + `operator_favorite_items` (favoritos por operador e filial); recentes/mais vendidos calculados (M3). |
+| 2026-10-26 | M3.1: `locations` (sem `qr_code` por ora), rótulo único por filial. M3: `command_items.quantity` passa a ser INT (quantidade inteira no MVP). |

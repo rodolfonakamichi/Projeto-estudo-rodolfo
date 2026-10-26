@@ -36,6 +36,8 @@ final class IdentifierForeignKeys
         // produto também não se apaga (desativa); comanda/pedido vão apontar para ele
         'product_id' => ['products', null],
         'user_id' => ['users', 'CASCADE'],
+        // local também se desativa em vez de apagar (comanda de mesa aponta para ele)
+        'location_id' => ['locations', null],
     ];
 
     public function postGenerateSchema(GenerateSchemaEventArgs $event): void

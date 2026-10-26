@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Console\Demo;
 
+use App\Application\Attendance\AttendanceQuery;
+use App\Application\Attendance\Location\CreateLocation;
 use App\Application\Catalog\CatalogQuery;
 use App\Application\Catalog\Category\CreateCategory;
 use App\Application\Catalog\Product\CreateProduct;
@@ -12,6 +14,8 @@ use App\Application\Catalog\Product\ModifierInput;
 use App\Application\Catalog\Product\VariantInput;
 use App\Application\Catalog\Station\CreateStation;
 use App\Application\Shared\Bus\CommandBus;
+use App\Domain\Attendance\LocationId;
+use App\Domain\Attendance\LocationType;
 use App\Domain\Catalog\CategoryId;
 use App\Domain\Catalog\ModifierGroupId;
 use App\Domain\Catalog\ModifierId;
@@ -31,14 +35,15 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * bin/console app:seed-demo-catalog [--extra=1000] — cardápio da empresa demo.
+ * bin/console app:seed-demo-catalog [--extra=1000] — cardápio e mesas da empresa demo.
  *
  * Um cardápio de verdade (Chopp, X-Burger, Caipirinha...) + `--extra` produtos
  * sintéticos para medir a busca (aceite M2.4: `q=cho` em < 50 ms com 1k).
  * Tudo pelos casos de uso, com o dono da demo como ator: passa pelas mesmas
- * regras e permissões da API. Idempotente: filial que já tem categoria é pulada.
+ * regras e permissões da API. Idempotente: filial que já tem categoria não
+ * ganha cardápio de novo; filial que já tem local não ganha mesas de novo.
  */
-#[AsCommand(name: 'app:seed-demo-catalog', description: 'Cria o cardápio da empresa demo (rode app:seed-demo antes)')]
+#[AsCommand(name: 'app:seed-demo-catalog', description: 'Cria o cardápio e as mesas da empresa demo (rode app:seed-demo antes)')]
 final readonly class SeedDemoCatalogCommand
 {
     private const ACTOR_EMAIL = 'dono@demo.com';
@@ -51,6 +56,7 @@ final readonly class SeedDemoCatalogCommand
         private CompanyRepository $companies,
         private UserRepository $users,
         private CatalogQuery $catalog,
+        private AttendanceQuery $attendance,
         private EntityManagerInterface $entityManager,
         #[Autowire('%kernel.environment%')] private string $environment,
     ) {
@@ -78,13 +84,22 @@ final readonly class SeedDemoCatalogCommand
         $actorId = $owner->id()->toString();
         $branchId = $company->branches()[0]->id();
 
+        $branch = $branchId->toString();
+
+        if ([] === $this->attendance->locations($company->id(), $branchId)) {
+            $this->bus->dispatch(new CreateLocation(LocationId::generate()->toString(), $actorId, $branch, LocationType::Counter->value, 'Balcão'));
+            for ($table = 1; $table <= 10; ++$table) {
+                $this->bus->dispatch(new CreateLocation(LocationId::generate()->toString(), $actorId, $branch, LocationType::Table->value, "Mesa {$table}"));
+            }
+            $console->success('Locais da demo: Balcão e Mesa 1 a 10.');
+        }
+
         if ([] !== $this->catalog->categories($company->id(), $branchId)) {
             $console->note('A filial da demo já tem cardápio — nada a fazer.');
 
             return Command::SUCCESS;
         }
 
-        $branch = $branchId->toString();
         $categories = [];
         foreach (['Bebidas', 'Lanches', 'Porções', 'Sobremesas'] as $position => $name) {
             $categories[$name] = CategoryId::generate()->toString();

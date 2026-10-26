@@ -82,6 +82,7 @@ Formato `contexto.recurso.ação`.
 | `admin.branch.manage` | CRUD de filiais |
 | `admin.capability.manage` | Ligar/desligar capabilities |
 | `admin.device.manage` | Parear/revogar aparelhos (tablet do salão, KDS) na filial |
+| `admin.location.manage` | Cadastrar mesas, balcões e áreas (locais) da filial |
 | `report.sales.view` | Relatórios de venda, ticket médio, margem |
 | `report.audit.view` | Timeline e logs de auditoria |
 | `report.production.view` | Métricas de tempo de produção |
@@ -128,6 +129,7 @@ Formato `contexto.recurso.ação`.
 | admin.branch.manage | ● | ● | — | — | — | — | — | — | — |
 | admin.capability.manage | ● | ▲ | — | — | — | — | — | — | — |
 | admin.device.manage | ● | ● | ● | — | — | — | — | — | — |
+| admin.location.manage | ● | ● | ● | — | — | — | — | — | — |
 | report.sales.view | ● | ● | ● | ▲ | — | — | — | — | ● |
 | report.audit.view | ● | ● | ● | — | — | — | — | — | ● |
 | report.production.view | ● | ● | ● | — | — | ● | ● | — | ● |
@@ -244,3 +246,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-10-23 | Nova permissão `admin.device.manage` (OWNER/ADMIN/MANAGER) para parear aparelhos (M1.3). Permissão nova = atualizar `DefaultRoles` + migration de dados para empresas existentes. |
 | 2026-10-26 | M1.5: §6 reflete o código — `PermissionChecker` (ator explícito) + `PermissionVoter`; endpoints de UX contextual `/api/me/permissions`. |
 | 2026-10-26 | M2.3: regra de preço — operação que define valor exige `catalog.price.manage` junto com `catalog.product.manage`. |
+| 2026-10-26 | Nova permissão `admin.location.manage` (OWNER/ADMIN/MANAGER) para cadastrar mesas/locais (M3.1), com migration de dados. |
