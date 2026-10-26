@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 (2026-10-23): id próprio; branch_id NULL = papel na empresa toda -->
+    <entity name="App\Domain\Identity\UserRole" table="user_roles">
+        <unique-constraints>
+            <unique-constraint name="uniq_user_roles_scope" columns="user_id,role_id,branch_id"/>
+        </unique-constraints>
+
+        <id name="id" type="user_role_id"/>
+
+        <many-to-one field="user" target-entity="App\Domain\Identity\User" inversed-by="roles">
+            <join-column name="user_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+        <many-to-one field="role" target-entity="App\Domain\Identity\Role">
+            <join-column name="role_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+        <many-to-one field="branch" target-entity="App\Domain\Identity\Branch">
+            <join-column name="branch_id" nullable="true" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

@@ -2,7 +2,7 @@
 
 > Modelo: **RBAC** (papel → permissões) + **ABAC leve** para desconto (faixa por
 > papel). Papéis e permissões são **por empresa**; um papel pode ser atribuído
-> **por unidade** (`user_roles.unit_id`). Ver seções 31–32 da pesquisa.
+> **por filial** (`user_roles.branch_id`). Ver seções 31–32 da pesquisa.
 
 ---
 
@@ -10,15 +10,15 @@
 
 | Código | Descrição | Escopo típico |
 |--------|-----------|---------------|
-| `OWNER` | Dono. Tudo, inclusive faturamento da plataforma. | Company |
-| `ADMIN` | Administra configuração, catálogo, usuários. | Company |
-| `MANAGER` | Gerente de unidade: autoriza desconto/estorno, fecha caixa, cancela. | Unidade |
-| `CASHIER` | Caixa: pagamentos, sessão de caixa, fechar comanda. | Unidade |
-| `WAITER` | Garçom: abrir comanda, lançar item, enviar pedido, entregar. | Unidade |
+| `OWNER` | Dono. Tudo, inclusive faturamento da plataforma. | Empresa |
+| `ADMIN` | Administra configuração, catálogo, usuários. | Empresa |
+| `MANAGER` | Gerente de filial: autoriza desconto/estorno, fecha caixa, cancela. | Filial |
+| `CASHIER` | Caixa: pagamentos, sessão de caixa, fechar comanda. | Filial |
+| `WAITER` | Garçom: abrir comanda, lançar item, enviar pedido, entregar. | Filial |
 | `KITCHEN` | Cozinha: opera KDS da(s) estação(ões) de cozinha. | Estação |
 | `BAR` | Bar: opera KDS do bar. | Estação |
-| `STOCK` | Estoque: entradas, ajustes, fichas técnicas. | Unidade |
-| `AUDITOR` | Só leitura: relatórios, timeline, logs. | Company |
+| `STOCK` | Estoque: entradas, ajustes, fichas técnicas. | Filial |
+| `AUDITOR` | Só leitura: relatórios, timeline, logs. | Empresa |
 
 Papéis são **cumulativos**: um usuário pode ser `WAITER` + `CASHIER`.
 
@@ -79,8 +79,9 @@ Formato `contexto.recurso.ação`.
 | Permissão | O que libera |
 |-----------|--------------|
 | `admin.user.manage` | CRUD de usuários e papéis |
-| `admin.unit.manage` | CRUD de unidades |
+| `admin.branch.manage` | CRUD de filiais |
 | `admin.capability.manage` | Ligar/desligar capabilities |
+| `admin.device.manage` | Parear/revogar aparelhos (tablet do salão, KDS) na filial |
 | `report.sales.view` | Relatórios de venda, ticket médio, margem |
 | `report.audit.view` | Timeline e logs de auditoria |
 | `report.production.view` | Métricas de tempo de produção |
@@ -124,22 +125,23 @@ Formato `contexto.recurso.ação`.
 | stock.adjust | ● | ● | ● | — | — | — | — | ▲ | — |
 | stock.recipe.manage | ● | ● | ● | — | — | — | — | ● | — |
 | admin.user.manage | ● | ● | — | — | — | — | — | — | — |
-| admin.unit.manage | ● | ● | — | — | — | — | — | — | — |
+| admin.branch.manage | ● | ● | — | — | — | — | — | — | — |
 | admin.capability.manage | ● | ▲ | — | — | — | — | — | — | — |
+| admin.device.manage | ● | ● | ● | — | — | — | — | — | — |
 | report.sales.view | ● | ● | ● | ▲ | — | — | — | — | ● |
 | report.audit.view | ● | ● | ● | — | — | — | — | — | ● |
 | report.production.view | ● | ● | ● | — | — | ● | ● | — | ● |
 
 > `report.sales.view ▲` para CASHIER = só o **fechamento do próprio turno**, não
 > o histórico da empresa. `catalog.price.manage ▲` para MANAGER = dentro da
-> unidade dele. `admin.capability.manage ▲` para ADMIN = não pode desligar
+> filial dele. `admin.capability.manage ▲` para ADMIN = não pode desligar
 > capability que já tem dado em uso sem confirmação extra.
 
 ---
 
 ## 4. Autorização de desconto por faixa (seção 32)
 
-Tabela `discount_limits` (`role_code` → `max_percent`):
+Coluna `roles.max_discount_percent` (`NULL` = sem limite). Valores padrão:
 
 | Papel | Limite padrão |
 |-------|---------------|
@@ -188,9 +190,9 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | WAITER | Minhas mesas · Comandas abertas · Lançar pedido · Entregas pendentes |
 | KITCHEN / BAR | KDS da estação · Fila · Métricas de tempo (leitura) |
 | CASHIER | Comandas a pagar · Pagamentos · Sessão de caixa · Fechamento do turno |
-| MANAGER | Tudo de CASHIER/WAITER + Aprovações · Cancelamentos · Fechar caixa · Dashboard da unidade |
-| ADMIN | Catálogo · Usuários · Estações · Capabilities · Unidades |
-| OWNER | Tudo + Dashboard multiunidade · Relatórios da empresa |
+| MANAGER | Tudo de CASHIER/WAITER + Aprovações · Cancelamentos · Fechar caixa · Dashboard da filial |
+| ADMIN | Catálogo · Usuários · Estações · Capabilities · Filiais |
+| OWNER | Tudo + Dashboard multifilial · Relatórios da empresa |
 | AUDITOR | Relatórios · Timeline · Logs (somente leitura) |
 
 ---
@@ -199,23 +201,29 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 
 - **Seed** de papéis+permissões por `roles`/`role_permissions` no bootstrap da
   empresa (o "template de negócio" da seção 47 pode variar só os padrões).
-- Uma checagem central `PermissionChecker::assert($user, 'command.close', $unitId)`
-  (serviço em `Application`), resolvendo as permissões do usuário a partir de
-  `user_roles` / `role_permissions`. Sem framework de autorização (ADR-011).
+- Uma checagem central `PermissionChecker::assert($actorId, Permission::CommandClose, $branchId)`
+  (`Application\Identity\Authorization`), que carrega o usuário e delega para
+  `User::can()` (a regra mora no Domain). O ator vem explícito, não do contexto:
+  o mesmo caso de uso roda por HTTP, CLI ou teste. Exposta ao framework pelo
+  `PermissionVoter` (ADR-012): `isGranted('command.close', $branchId)` /
+  `#[IsGranted('command.close', subject: 'branchId')]`. Aparelho pareado (sem
+  usuário) nunca tem permissão de negócio.
+- UX contextual (§5): `GET /api/me/permissions?branchId=` lista as permissões
+  efetivas; `GET /api/me/permissions/{code}?branchId=` responde 204/403.
 - A checagem acontece no **caso de uso** (`Application`), não no controller nem
   na entidade:
   ```php
-  final class CloseCommand {
-      public function __invoke(CloseCommandInput $in): void {
-          $this->permissions->assert($in->actor, 'command.close', $in->unitId);
-          $command = $this->commands->get($in->commandId);
+  final class CloseCommandHandler {
+      public function __invoke(CloseCommand $input): void {
+          $this->permissions->assert(UserId::fromString($input->actorId), Permission::CommandClose, BranchId::fromString($input->branchId));
+          $command = $this->commands->get(CommandId::fromString($input->commandId));
           $command->close();               // a entidade só sabe a regra "saldo = 0"
           $this->commands->save($command);
       }
   }
   ```
-- Faixa de desconto: `DiscountPolicy::maxPercentFor($roleCodes)` lê
-  `discount_limits` (cache por empresa).
+- Faixa de desconto: `User::maxDiscountIn($branchId)` lê
+  `roles.max_discount_percent`.
 
 ---
 
@@ -226,3 +234,7 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Checagem de permissão sem Gate do Laravel — `PermissionChecker` próprio (ADR-011). |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-10-23 | Limite de desconto passa a ser coluna de `roles`. Matriz §3 materializada em `Domain\Identity\DefaultRoles` (▲ = concedida); permissões como enum `Permission`; checagem em `User::can()`. |
+| 2026-10-23 | Nova permissão `admin.device.manage` (OWNER/ADMIN/MANAGER) para parear aparelhos (M1.3). Permissão nova = atualizar `DefaultRoles` + migration de dados para empresas existentes. |
+| 2026-10-26 | M1.5: §6 reflete o código — `PermissionChecker` (ator explícito) + `PermissionVoter`; endpoints de UX contextual `/api/me/permissions`. |

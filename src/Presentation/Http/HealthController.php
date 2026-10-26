@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Presentation\Http;
 
-use App\Infrastructure\Http\JsonResponse;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Attribute\Route;
 
-final class HealthController implements RequestHandlerInterface
+/**
+ * Liveness: responde 200 se a aplicação sobe. Não toca no banco — quem quiser
+ * checar o MySQL usa `bin/console app:health`.
+ */
+final class HealthController
 {
-    public function handle(ServerRequestInterface $request): ResponseInterface
+    #[Route('/health', name: 'health', methods: ['GET'])]
+    public function __invoke(): JsonResponse
     {
-        return JsonResponse::create(['status' => 'ok']);
+        return new JsonResponse(['status' => 'ok']);
     }
 }

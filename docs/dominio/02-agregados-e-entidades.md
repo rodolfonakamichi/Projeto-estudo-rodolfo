@@ -11,16 +11,18 @@
 
 | Agregado (raiz) | Contém | Invariante principal |
 |-----------------|--------|----------------------|
-| `Company` | `Unit[]`, `Capability[]` | Slug único; ao menos 1 unidade ativa. |
-| `User` | `Role[]` (por unidade) | E-mail único por empresa. |
-| `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa OU preço próprio; soma de min/max dos grupos coerente. |
-| `Category` | — | Nome único por unidade. |
+| `Company` | `Branch[]`, `Capability[]` | Slug único; ao menos 1 filial ativa. |
+| `User` | `UserRole[]` (papel + filial opcional) | E-mail único por empresa; papel/filial da mesma empresa; sem papel duplicado no mesmo escopo. |
+| `Role` | `RolePermission[]` | Código único por empresa; limite de desconto do papel. |
+| `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa (o preço mora na variação); min/max dos grupos coerente. |
+| `Category` | — | Nome único por filial; arquivada não muda. |
+| `Station` | — | Nome único por filial; só com a capability `kitchen`. |
 | `Location` | — | Código de QR único por empresa. |
 | `Command` | `CommandItem[]`, `Discount[]`, `BillSplit?` | Total = Σ itens − descontos; só fecha se saldo = 0; item não some, é cancelado. |
 | `Order` | `OrderItem[]` | Pertence a 1 comanda aberta; não pode ser enviado vazio. |
 | `ProductionTicket` | `ProductionTicketItem[]` | Roteado para exatamente 1 estação; segue a máquina de estados. |
 | `Payment` | — | Valor > 0; confirma só via confirmação da fonte (webhook PIX / operador). |
-| `CashRegister` | `CashMovement[]` | Só 1 sessão aberta por operador/unidade; fecha com contagem informada. |
+| `CashRegister` | `CashMovement[]` | Só 1 sessão aberta por operador/filial; fecha com contagem informada. |
 | `Stock` | `StockMovement[]` | Saldo = Σ movimentos; não fica negativo sem flag `allow_negative`. |
 | `DomainEvent` | — | Imutável; `id` (ULID) único; `published_at` nulo até despacho. |
 
@@ -37,14 +39,14 @@
 
 ```mermaid
 erDiagram
-    COMPANY ||--o{ UNIT : possui
+    COMPANY ||--o{ BRANCH : possui
     COMPANY ||--o{ COMPANY_CAPABILITY : habilita
     COMPANY ||--o{ USER : possui
-    UNIT   ||--o{ CATEGORY : tem
-    UNIT   ||--o{ PRODUCT : tem
-    UNIT   ||--o{ LOCATION : tem
-    UNIT   ||--o{ STATION : tem
-    UNIT   ||--o{ PAYMENT_METHOD : configura
+    BRANCH   ||--o{ CATEGORY : tem
+    BRANCH   ||--o{ PRODUCT : tem
+    BRANCH   ||--o{ LOCATION : tem
+    BRANCH   ||--o{ STATION : tem
+    BRANCH   ||--o{ PAYMENT_METHOD : configura
 
     USER ||--o{ USER_ROLE : recebe
     ROLE ||--o{ ROLE_PERMISSION : agrupa
@@ -80,7 +82,7 @@ erDiagram
     PAYMENT ||--o| CASH_MOVEMENT : "gera (se dinheiro)"
     PAYMENT_METHOD ||--o{ PAYMENT : classifica
 
-    UNIT ||--o{ STOCK : mantém
+    BRANCH ||--o{ STOCK : mantém
     STOCK ||--o{ STOCK_MOVEMENT : histórico
     RECIPE_ITEM }o--|| STOCK : consome
 
@@ -98,8 +100,8 @@ erDiagram
 
 **Estado:**
 ```
-id (ULID)              company_id, unit_id
-display_number         # 42  (sequencial por unidade/dia)
+id (ULID)              company_id, branch_id
+display_number         # 42  (sequencial por filial/dia)
 bind_type              MESA | BALCAO | CLIENTE | QUARTO | PULSEIRA | EVENTO | VEICULO | SERVICO | AVULSO
 bind_ref               ULID da Location (se MESA) | id do Customer | código da pulseira | texto livre
 customer_id?           opcional
@@ -131,7 +133,7 @@ totals (calculado)     subtotal, discount_total, service_fee?, total, paid_total
 ### 3.2 `Order` (pedido)
 
 ```
-id, company_id, unit_id, command_id
+id, company_id, branch_id, command_id
 channel          TABLE | COUNTER | QR | DELIVERY | WHATSAPP | KIOSK | API
 placed_by        user_id (ou null se cliente via QR)
 status           CREATED | SENT | PARTIALLY_READY | READY | DELIVERED | CANCELLED
@@ -150,7 +152,7 @@ created_at, sent_at
 ### 3.3 `ProductionTicket` (o que o KDS mostra)
 
 ```
-id, company_id, unit_id, order_id, station_id
+id, company_id, branch_id, order_id, station_id
 status        RECEIVED | IN_PREPARATION | READY | DELIVERED | CANCELLED
 items[]       ProductionTicketItem { order_item_id, product_name, qty, modifiers_text, notes }
 received_at, started_at, ready_at, delivered_at   # base das métricas da seção 15
@@ -162,7 +164,7 @@ só vê o seu.
 ### 3.4 `Payment`
 
 ```
-id, company_id, unit_id, command_id, cash_register_id?
+id, company_id, branch_id, command_id, cash_register_id?
 method_id           FK PaymentMethod
 kind                CASH | PIX | CARD_DEBIT | CARD_CREDIT | VOUCHER | OTHER
 amount              BIGINT centavos
@@ -178,7 +180,7 @@ pagou".
 ### 3.5 `CashRegister` (sessão de caixa)
 
 ```
-id, company_id, unit_id, operator_id
+id, company_id, branch_id, operator_id
 status              OPEN | CLOSED
 opened_at, opening_amount
 closed_at?, counted_amount?, expected_amount?, difference?
@@ -204,21 +206,17 @@ sistema calcula `difference` e gera alerta se ≠ 0 (seção 43).
 
 ## 5. Nota de estudo — "por que não mapear a linha do banco direto para um objeto?"
 
-Sem ORM (ADR-011), a tentação é ter uma classe "registro" com getters/setters
-públicos que espelha a tabela e é o que o repositório devolve. Mas:
-- ela teria setter para tudo → não protege invariante nenhuma;
-- misturar "como está no banco" com "o que a regra permite" espalha `if` de
-  validação por toda parte.
+A tentação é ter uma classe "registro" com getters/setters públicos que espelha
+a tabela. Mas ela teria setter para tudo → não protege invariante nenhuma, e a
+validação se espalha em `if` pelo código.
 
-Então: a **entidade de domínio** (`Domain\Command\Command`) é uma classe PHP
-pura, com estado privado e métodos que garantem as regras. O **repositório**
-(`Infrastructure\Persistence\Repositories\PdoCommandRepository`) faz o SQL e um
-**mapeador** traduz `array` de linhas ⇄ entidade. Custa um mapeamento a mais — e
-é exatamente o que você quer praticar neste projeto.
-
-Se em algum ponto isso ficar pesado demais para o MVP, a alternativa honesta é
-"objeto de persistência com regras nos métodos + testes com banco" — mas aí
-registre como novo ADR revisando a ADR-002.
+Então: a **entidade de domínio** (`Domain\Identity\Company`) é uma classe PHP
+pura, com estado privado e métodos que garantem as regras (`addBranch`,
+`deactivateBranch`). O **Doctrine** (padrão *Data Mapper*, ADR-012) lê o
+mapeamento XML em `Infrastructure/Persistence/Doctrine/Mapping` e preenche as
+propriedades privadas direto, sem passar por construtor nem setter. A entidade
+não sabe que existe banco; o **repositório** (`DoctrineCompanyRepository`)
+implementa a interface do Domain.
 
 ---
 
@@ -229,3 +227,7 @@ registre como novo ADR revisando a ADR-002.
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Nota de estudo §5 reescrita para PDO + mapeador (ADR-011), sem Eloquent. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-10-23 | Nota §5 reescrita para Doctrine Data Mapper (ADR-012). Agregado `Company` implementado no M1. |
+| 2026-10-23 | `Role` vira agregado próprio (permissões + limite de desconto). `User` guarda `UserRole[]` com filial opcional. |
+| 2026-10-26 | M2: `Product` sempre com ≥1 variação (sem preço próprio); `Station` como agregado; Catálogo referencia outros agregados por ID. |

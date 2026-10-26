@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Identity\User" table="users">
+        <unique-constraints>
+            <unique-constraint name="uniq_users_company_email" columns="company_id,email"/>
+        </unique-constraints>
+
+        <id name="id" type="user_id"/>
+
+        <field name="name" length="150"/>
+        <field name="email" type="email"/>
+        <field name="passwordHash" column="password_hash" length="255"/>
+        <field name="pinHash" column="pin_hash" length="255" nullable="true"/>
+        <field name="status" length="30" enum-type="App\Domain\Identity\UserStatus"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+        <field name="updatedAt" column="updated_at" type="datetime_immutable"/>
+
+        <many-to-one field="company" target-entity="App\Domain\Identity\Company">
+            <join-column name="company_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+
+        <one-to-many field="roles" target-entity="App\Domain\Identity\UserRole" mapped-by="user" orphan-removal="true">
+            <cascade><cascade-persist/></cascade>
+        </one-to-many>
+    </entity>
+</doctrine-mapping>

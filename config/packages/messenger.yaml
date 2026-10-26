@@ -1,0 +1,30 @@
+framework:
+    messenger:
+        # Dois barramentos (CQRS leve):
+        #  - command.bus: 1 comando = 1 handler = 1 caso de uso. Cada despacho
+        #    roda dentro de uma transação do Doctrine (tudo ou nada).
+        #  - event.bus: eventos de domínio; 0..N handlers reagem.
+        default_bus: command.bus
+        buses:
+            command.bus:
+                middleware:
+                    - validation
+                    - doctrine_transaction
+            event.bus:
+                default_middleware:
+                    enabled: true
+                    allow_no_handlers: true
+
+        transports:
+            # https://symfony.com/doc/current/messenger.html#transport-configuration
+            # async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            sync: 'sync://'
+
+        routing:
+            # 'App\Application\...\AlgumComando': async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                sync: 'sync://'

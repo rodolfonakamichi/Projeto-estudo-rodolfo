@@ -1,0 +1,64 @@
+# Regra de dependência entre camadas (ADR-002), verificada no CI.
+#   Presentation -> Application -> Domain <- Infrastructure
+# Rodar: vendor/bin/deptrac analyse
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: Domain
+      collectors:
+        - type: directory
+          value: src/Domain/.*
+    - name: Application
+      collectors:
+        - type: directory
+          value: src/Application/.*
+    - name: Infrastructure
+      collectors:
+        - type: directory
+          value: src/Infrastructure/.*
+    - name: Presentation
+      collectors:
+        - type: directory
+          value: src/Presentation/.*
+    # Libs de terceiro permitidas no Domain (ADR-012): symfony/uid (embrulhada
+    # em Domain\Shared\Ulid) e doctrine/collections (só estrutura de dados).
+    - name: DomainLibs
+      collectors:
+        - type: classLike
+          value: ^(Symfony\\Component\\Uid|Doctrine\\Common\\Collections)\\.*
+    # Interface PSR do relógio: a Application lê a hora sem depender do Symfony
+    - name: PsrClock
+      collectors:
+        - type: classLike
+          value: ^Psr\\Clock\\.*
+    - name: Vendor
+      collectors:
+        - type: bool
+          must:
+            - type: classLike
+              value: ^(Symfony|Doctrine|Psr)\\.*
+          must_not:
+            - type: classLike
+              value: ^(Symfony\\Component\\Uid|Doctrine\\Common\\Collections)\\.*
+            - type: classLike
+              value: ^Psr\\Clock\\.*
+  ruleset:
+    Domain:
+      - DomainLibs
+    Application:
+      - Domain
+      - DomainLibs
+      - PsrClock
+    Infrastructure:
+      - Domain
+      - Application
+      - DomainLibs
+      - PsrClock
+      - Vendor
+    Presentation:
+      - Application
+      - Domain
+      - Infrastructure # só os principais do Security (AuthenticatedUser/Device)
+      - DomainLibs
+      - Vendor

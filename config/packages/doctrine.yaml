@@ -1,0 +1,81 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+
+        profiling_collect_backtrace: '%kernel.debug%'
+        use_savepoints: true
+        # Tipos próprios: IDs tipados ⇄ CHAR(26), VOs (Slug, Email...), DATETIME(6)
+        types:
+            company_id: App\Infrastructure\Persistence\Doctrine\Type\CompanyIdType
+            branch_id: App\Infrastructure\Persistence\Doctrine\Type\BranchIdType
+            user_id: App\Infrastructure\Persistence\Doctrine\Type\UserIdType
+            company_capability_id: App\Infrastructure\Persistence\Doctrine\Type\CompanyCapabilityIdType
+            role_id: App\Infrastructure\Persistence\Doctrine\Type\RoleIdType
+            user_role_id: App\Infrastructure\Persistence\Doctrine\Type\UserRoleIdType
+            api_token_id: App\Infrastructure\Persistence\Doctrine\Type\ApiTokenIdType
+            device_id: App\Infrastructure\Persistence\Doctrine\Type\DeviceIdType
+            station_id: App\Infrastructure\Persistence\Doctrine\Type\StationIdType
+            category_id: App\Infrastructure\Persistence\Doctrine\Type\CategoryIdType
+            product_id: App\Infrastructure\Persistence\Doctrine\Type\ProductIdType
+            product_variant_id: App\Infrastructure\Persistence\Doctrine\Type\ProductVariantIdType
+            modifier_group_id: App\Infrastructure\Persistence\Doctrine\Type\ModifierGroupIdType
+            modifier_id: App\Infrastructure\Persistence\Doctrine\Type\ModifierIdType
+            money: App\Infrastructure\Persistence\Doctrine\Type\MoneyType
+            slug: App\Infrastructure\Persistence\Doctrine\Type\SlugType
+            email: App\Infrastructure\Persistence\Doctrine\Type\EmailType
+            role_code: App\Infrastructure\Persistence\Doctrine\Type\RoleCodeType
+            percentage: App\Infrastructure\Persistence\Doctrine\Type\PercentageType
+            # sobrescrevem os nativos: toda data do projeto é DATETIME(6) UTC
+            datetime: App\Infrastructure\Persistence\Doctrine\Type\DateTimeMicrosecondsType
+            datetime_immutable: App\Infrastructure\Persistence\Doctrine\Type\DateTimeImmutableMicrosecondsType
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: false
+        mappings:
+            # Mapeamento em XML, FORA do Domain (ADR-002): as entidades são PHP
+            # puro, sem atributos do Doctrine. Um arquivo por classe:
+            #   App\Domain\Identity\Company -> Identity.Company.orm.xml
+            Domain:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Infrastructure/Persistence/Doctrine/Mapping'
+                prefix: 'App\Domain'
+                alias: Domain
+        filters:
+            # company_id = ? em toda consulta do ORM (ADR-004). Desligado por
+            # padrão: o CompanyContextHolder liga ao autenticar o token.
+            company:
+                class: App\Infrastructure\Persistence\Doctrine\Filter\CompanyFilter
+                enabled: false
+        controller_resolver:
+            auto_mapping: false
+
+when@test:
+    doctrine:
+        dbal:
+            # "TEST_TOKEN" is typically set by ParaTest
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            auto_generate_proxy_classes: false
+            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system

@@ -1,0 +1,15 @@
+parameters:
+    level: 8
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+    excludePaths:
+        - config/reference.php
+    doctrine:
+        # dá ao PHPStan o mapeamento: ele passa a saber que o Doctrine lê/escreve as propriedades
+        objectManagerLoader: tests/object-manager.php
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml

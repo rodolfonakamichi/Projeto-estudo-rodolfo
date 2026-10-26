@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Domain\Catalog\Modifier" table="modifiers">
+        <unique-constraints>
+            <unique-constraint name="uniq_modifiers_name" columns="modifier_group_id,name"/>
+        </unique-constraints>
+
+        <id name="id" type="modifier_id"/>
+
+        <field name="name" length="80"/>
+        <field name="priceDelta" column="price_delta_cents" type="money"/>
+        <field name="active" column="is_active" type="boolean"/>
+        <field name="sortOrder" column="sort_order" type="integer"/>
+
+        <many-to-one field="group" target-entity="App\Domain\Catalog\ModifierGroup" inversed-by="modifiers">
+            <join-column name="modifier_group_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

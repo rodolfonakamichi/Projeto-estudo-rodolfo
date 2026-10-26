@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 §1. O token em claro nunca é gravado: só o SHA-256. -->
+    <entity name="App\Domain\Identity\ApiToken" table="api_tokens">
+        <unique-constraints>
+            <unique-constraint name="uniq_api_tokens_hash" columns="token_hash"/>
+        </unique-constraints>
+
+        <id name="id" type="api_token_id"/>
+
+        <field name="name" length="80"/>
+        <field name="tokenHash" column="token_hash" length="64">
+            <options><option name="fixed">true</option></options>
+        </field>
+        <field name="lastUsedAt" column="last_used_at" type="datetime_immutable" nullable="true"/>
+        <field name="expiresAt" column="expires_at" type="datetime_immutable" nullable="true"/>
+        <field name="revokedAt" column="revoked_at" type="datetime_immutable" nullable="true"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+
+        <many-to-one field="company" target-entity="App\Domain\Identity\Company">
+            <join-column name="company_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+        <many-to-one field="user" target-entity="App\Domain\Identity\User">
+            <join-column name="user_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

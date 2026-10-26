@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Domain\Shared;
+namespace App\Tests\Domain\Shared;
 
 use App\Domain\Shared\Money;
 use PHPUnit\Framework\TestCase;
@@ -11,10 +11,10 @@ final class MoneyTest extends TestCase
 {
     public function test_cria_a_partir_de_centavos(): void
     {
-        $m = Money::fromCents(2599);
+        $money = Money::fromCents(2599);
 
-        self::assertSame(2599, $m->cents());
-        self::assertSame('BRL', $m->currency());
+        self::assertSame(2599, $money->cents());
+        self::assertSame('BRL', $money->currency());
     }
 
     public function test_soma_dois_valores_da_mesma_moeda(): void
@@ -42,15 +42,14 @@ final class MoneyTest extends TestCase
     {
         $partes = Money::fromCents(10000)->allocate([1, 1, 1]);
 
-        self::assertSame([3334, 3333, 3333], array_map(fn (Money $m) => $m->cents(), $partes));
-        self::assertSame(10000, array_sum(array_map(fn (Money $m) => $m->cents(), $partes)));
+        self::assertSame([3334, 3333, 3333], array_map(static fn (Money $money) => $money->cents(), $partes));
     }
 
     public function test_allocate_respeita_pesos_diferentes(): void
     {
         $partes = Money::fromCents(10000)->allocate([70, 30]);
 
-        self::assertSame([7000, 3000], array_map(fn (Money $m) => $m->cents(), $partes));
+        self::assertSame([7000, 3000], array_map(static fn (Money $money) => $money->cents(), $partes));
     }
 
     public function test_allocate_mantem_a_moeda(): void

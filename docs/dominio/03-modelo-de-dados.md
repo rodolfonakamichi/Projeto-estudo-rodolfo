@@ -4,14 +4,14 @@
 > - Engine **InnoDB**, charset **utf8mb4**.
 > - PK = `id CHAR(26)` (ULID). Sem auto-increment nas tabelas de negócio.
 > - **Toda** tabela de negócio: `company_id CHAR(26) NOT NULL`; quando fizer
->   sentido, `unit_id CHAR(26) NOT NULL`.
+>   sentido, `branch_id CHAR(26) NOT NULL`.
 > - Dinheiro: `BIGINT` em centavos. Nome sufixo `_cents` quando ajudar.
 > - Status: `VARCHAR(30)`.
 > - Datas: `DATETIME(6)` (UTC). `created_at`/`updated_at` em todas.
 > - Índices únicos sempre **compostos com `company_id`**.
 > - Soft delete só onde há motivo real; preferimos `status`/`archived_at`.
 
-Este documento é o **contrato do schema**. As migrations (Phinx — ver ADR-011)
+Este documento é o **contrato do schema**. As migrations (Doctrine Migrations — ver ADR-012)
 devem bater com ele. Os tipos abaixo são um esboço para revisão — não são a
 migration final.
 
@@ -35,7 +35,7 @@ migration final.
 | enabled | TINYINT(1) | |
 | — | | `UNIQUE (company_id, capability)` |
 
-### `units`
+### `branches`
 | id | CHAR(26) PK |
 | company_id | CHAR(26) FK |
 | name | VARCHAR(150) |
@@ -47,50 +47,110 @@ migration final.
 | id | CHAR(26) PK |
 | company_id | CHAR(26) FK |
 | name | VARCHAR(150) |
-| email | VARCHAR(190) |
-| password_hash | VARCHAR(255) |
-| pin_hash | VARCHAR(255) NULL | login rápido no PWA (4–6 dígitos) |
-| status | VARCHAR(30) |
+| email | VARCHAR(190) | normalizado (minúsculas) |
+| password_hash | VARCHAR(255) | bcrypt/argon2 |
+| pin_hash | VARCHAR(255) NULL | login rápido no PWA (4–6 dígitos) — o usuário é escolhido na tela e depois digita o PIN; PIN pode repetir entre pessoas |
+| status | VARCHAR(30) | ACTIVE / INACTIVE |
 | — | | `UNIQUE (company_id, email)` |
 
+> Login por senha: **slug da empresa + e-mail + senha** (o e-mail só é único
+> dentro da empresa).
+
 ### `roles`
-| id | CHAR(26) PK | company_id | code VARCHAR(30) (`OWNER`,`WAITER`...) | name VARCHAR(80) | `UNIQUE (company_id, code)` |
+| id | CHAR(26) PK |
+| company_id | CHAR(26) FK → companies |
+| code | VARCHAR(30) | `OWNER`, `WAITER`... |
+| name | VARCHAR(80) | |
+| max_discount_percent | DECIMAL(5,2) NULL | limite de desconto do papel (doc 06 §4); `NULL` = sem limite |
+| created_at, updated_at | DATETIME(6) | |
+| — | | `UNIQUE (company_id, code)` |
 
 ### `role_permissions`
-| role_id | CHAR(26) FK | permission VARCHAR(60) | `PRIMARY KEY (role_id, permission)` |
+| role_id | CHAR(26) FK | permission VARCHAR(60) | `PRIMARY KEY (permission, role_id)` + `INDEX (role_id)` |
 
 ### `user_roles`
-| user_id | CHAR(26) FK | role_id | CHAR(26) FK | unit_id CHAR(26) NULL (papel pode ser por unidade) | `PRIMARY KEY (user_id, role_id, unit_id)` |
+| id | CHAR(26) PK |
+| user_id | CHAR(26) FK → users |
+| role_id | CHAR(26) FK → roles |
+| branch_id | CHAR(26) NULL FK → branches | `NULL` = papel válido em **toda a empresa** |
+| — | | `UNIQUE (user_id, role_id, branch_id)` |
 
-### `discount_limits`
-| id | CHAR(26) PK | company_id | role_code VARCHAR(30) | max_percent DECIMAL(5,2) NULL (`NULL` = sem limite) | `UNIQUE (company_id, role_code)` |
+> Chave própria (ULID) em vez da PK composta com sentinela `''`: `branch_id`
+> vira FK de verdade e o mapeamento Doctrine fica simples. Como o MySQL aceita
+> vários `NULL` num índice único, a duplicidade de papel "empresa toda" é
+> barrada pelo agregado `User` (que tem a coleção de papéis), não pelo banco.
+
+### `api_tokens`
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | CHAR(26) PK | |
+| company_id | CHAR(26) FK → companies | |
+| user_id | CHAR(26) FK → users | dono do token |
+| name | VARCHAR(80) | rótulo ("PWA do João", "integração X") |
+| token_hash | CHAR(64) | SHA-256 do token; o token em claro só aparece na criação |
+| last_used_at | DATETIME(6) NULL | |
+| expires_at | DATETIME(6) NULL | `NULL` = não expira |
+| revoked_at | DATETIME(6) NULL | |
+| created_at | DATETIME(6) | |
+| — | | `UNIQUE (token_hash)`, `INDEX (user_id)` |
+
+> Autenticação (M1.3): header `Authorization: Bearer u_<64 hex>` → SHA-256 →
+> busca em `api_tokens` → resolve `user_id` + `company_id`. O token em claro
+> **nunca** é gravado. `expires_at` é **deslizante**: cada uso empurra para
+> agora + 12h (`app.auth.user_token_idle`); `NULL` = não expira (integração).
+
+### `devices`
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | CHAR(26) PK | |
+| company_id | CHAR(26) FK → companies | |
+| branch_id | CHAR(26) FK → branches | o aparelho serve a UMA filial |
+| paired_by | CHAR(26) FK → users | quem pareou (precisa de `admin.device.manage`) |
+| name | VARCHAR(80) | "Tablet salão", "KDS cozinha" |
+| token_hash | CHAR(64) | SHA-256 do token `d_...`; `UNIQUE` |
+| last_used_at | DATETIME(6) NULL | |
+| revoked_at | DATETIME(6) NULL | aparelho perdido/roubado |
+| created_at | DATETIME(6) | |
+
+> Fluxo do PWA: gerente pareia o tablet (`POST /api/devices`) → o tablet guarda
+> o token `d_` → lista quem pode logar (`GET /api/device/users`) → a pessoa
+> toca no nome e digita o PIN (`POST /api/auth/pin`) → recebe token `u_`.
 
 ---
 
 ## 2. Catálogo
 
 ### `categories`
-| id | CHAR(26) PK | company_id | unit_id | name VARCHAR(120) | sort_order INT | archived_at DATETIME(6) NULL | `UNIQUE (unit_id, name)` |
+| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(120) | sort_order INT | archived_at DATETIME(6) NULL | created_at, updated_at | `UNIQUE (branch_id, name)` |
+
+> Cardápio **por filial** (decisão 2026-10-26). Categoria não é apagada, é arquivada.
 
 ### `products`
 | Coluna | Tipo | Notas |
 |--------|------|------|
 | id | CHAR(26) PK | |
-| company_id, unit_id | CHAR(26) | |
+| company_id, branch_id | CHAR(26) | |
 | category_id | CHAR(26) FK NULL | |
 | name | VARCHAR(150) | |
 | kind | VARCHAR(20) | `PRODUCT` / `SERVICE` (service = Fase 3) |
-| base_price_cents | BIGINT NULL | usado se não houver variação |
 | station_id | CHAR(26) FK NULL | estação padrão de produção |
 | track_stock | TINYINT(1) | se gera baixa de estoque |
 | is_active | TINYINT(1) | |
-| — | | `INDEX (unit_id, is_active)`, `FULLTEXT (name)` para busca rápida (seção 12) |
+| — | | `INDEX (branch_id, is_active)`, `FULLTEXT (name)` para busca rápida (seção 12) |
 
 ### `product_variants`
 | id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`300ml`) | price_cents BIGINT | sku VARCHAR(60) NULL | is_active TINYINT(1) | sort_order INT |
 
+> **Todo produto tem ≥1 variação** (decisão 2026-10-26): o preço mora só aqui.
+> Produto sem tamanho ganha uma variação padrão. Assim o item da comanda/pedido
+> sempre aponta para uma variação — um caminho só de preço.
+
 ### `modifier_groups`
-| id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`Ponto`, `Adicionais`) | min_select INT | max_select INT | is_required TINYINT(1) | sort_order INT |
+| id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`Ponto`, `Adicionais`) | min_select INT | max_select INT | sort_order INT | `UNIQUE (product_id, name)` |
+
+> Grupo **por produto** (decisão 2026-10-26). Sem `is_required`: obrigatório =
+> `min_select >= 1` (uma fonte só). Invariante: `0 ≤ min ≤ max`, `max ≥ 1`, e
+> `min ≤ modificadores ativos` (o mínimo tem que ser alcançável).
 
 ### `modifiers`
 | id | CHAR(26) PK | modifier_group_id FK | name VARCHAR(80) | price_delta_cents BIGINT (pode ser 0 ou negativo) | is_active TINYINT(1) | sort_order INT |
@@ -100,14 +160,14 @@ migration final.
 `recipe_items`: | id PK | recipe_id FK | stock_id CHAR(26) FK → stocks | qty DECIMAL(10,3) | unit VARCHAR(10) |
 
 ### `stations` (capability `kitchen`)
-| id | CHAR(26) PK | company_id | unit_id | name VARCHAR(60) (`COZINHA`,`BAR`) | is_active TINYINT(1) | `UNIQUE (unit_id, name)` |
+| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(60) (`COZINHA`,`BAR`) | is_active TINYINT(1) | created_at, updated_at | `UNIQUE (branch_id, name)` |
 
 ---
 
 ## 3. Atendimento / Comanda
 
 ### `locations`
-| id | CHAR(26) PK | company_id | unit_id | type VARCHAR(20) (`TABLE`,`COUNTER`,`ROOM`,`EVENT_AREA`) | label VARCHAR(60) (`Mesa 12`) | qr_code VARCHAR(40) | is_active TINYINT(1) | `UNIQUE (company_id, qr_code)` |
+| id | CHAR(26) PK | company_id | branch_id | type VARCHAR(20) (`TABLE`,`COUNTER`,`ROOM`,`EVENT_AREA`) | label VARCHAR(60) (`Mesa 12`) | qr_code VARCHAR(40) | is_active TINYINT(1) | `UNIQUE (company_id, qr_code)` |
 
 ### `customers`
 | id | CHAR(26) PK | company_id | name VARCHAR(150) | phone VARCHAR(20) NULL | document VARCHAR(20) NULL | `INDEX (company_id, phone)` |
@@ -116,8 +176,8 @@ migration final.
 | Coluna | Tipo | Notas |
 |--------|------|------|
 | id | CHAR(26) PK | |
-| company_id, unit_id | CHAR(26) | |
-| display_number | INT | sequencial por unidade/dia (ver §7) |
+| company_id, branch_id | CHAR(26) | |
+| display_number | INT | sequencial por filial/dia (ver §7) |
 | business_date | DATE | data operacional (fecha às 05:00 local, config) |
 | bind_type | VARCHAR(20) | MESA, BALCAO, CLIENTE, QUARTO, PULSEIRA, EVENTO, VEICULO, SERVICO, AVULSO |
 | bind_ref | VARCHAR(60) NULL | location_id / customer_id / código pulseira / texto |
@@ -133,14 +193,14 @@ migration final.
 | paid_total_cents | BIGINT | |
 | balance_cents | BIGINT | `total − paid_total` |
 | cancel_reason | VARCHAR(255) NULL | |
-| — | | `UNIQUE (unit_id, business_date, display_number)` |
-| — | | `INDEX (unit_id, status)` — listar comandas abertas |
+| — | | `UNIQUE (branch_id, business_date, display_number)` |
+| — | | `INDEX (branch_id, status)` — listar comandas abertas |
 | — | | `INDEX (company_id, bind_type, bind_ref)` — achar comanda da mesa |
 
 > Regra: para `bind_type = MESA`, no máximo **uma** comanda `OPEN` por
 > `bind_ref`. Garantido pela aplicação + índice parcial emulado (coluna
 > gerada `open_bind_key = IF(status='OPEN' AND bind_type='MESA', bind_ref, NULL)`
-> com `UNIQUE (unit_id, open_bind_key)`).
+> com `UNIQUE (branch_id, open_bind_key)`).
 
 ### `command_items`
 | Coluna | Tipo | Notas |
@@ -150,7 +210,7 @@ migration final.
 | command_id | CHAR(26) FK | |
 | order_id | CHAR(26) FK NULL | pedido que originou (MVP: sempre preenchido) |
 | product_id | CHAR(26) FK | |
-| product_variant_id | CHAR(26) FK NULL | |
+| product_variant_id | CHAR(26) FK | sempre preenchido (todo produto tem variação) |
 | product_name | VARCHAR(150) | **cópia** no momento do lançamento |
 | unit_price_cents | BIGINT | **cópia** (não muda se o cardápio mudar) |
 | quantity | DECIMAL(10,3) | |
@@ -177,16 +237,16 @@ migration final.
 ## 4. Pedidos & Produção
 
 ### `orders`
-| id | CHAR(26) PK | company_id | unit_id | command_id FK | channel VARCHAR(15) | placed_by CHAR(26) NULL | status VARCHAR(20) (CREATED, SENT, PARTIALLY_READY, READY, DELIVERED, CANCELLED) | created_at | sent_at DATETIME(6) NULL | `INDEX (command_id)`, `INDEX (unit_id, status)` |
+| id | CHAR(26) PK | company_id | branch_id | command_id FK | channel VARCHAR(15) | placed_by CHAR(26) NULL | status VARCHAR(20) (CREATED, SENT, PARTIALLY_READY, READY, DELIVERED, CANCELLED) | created_at | sent_at DATETIME(6) NULL | `INDEX (command_id)`, `INDEX (branch_id, status)` |
 
 ### `order_items`
-| id | CHAR(26) PK | company_id | order_id FK | product_id FK | product_variant_id FK NULL | product_name VARCHAR(150) | unit_price_cents BIGINT | quantity DECIMAL(10,3) | notes VARCHAR(255) NULL | station_id CHAR(26) FK NULL | status VARCHAR(20) (PENDING, SENT, IN_PREPARATION, READY, DELIVERED, CANCELLED) | `INDEX (order_id)` |
+| id | CHAR(26) PK | company_id | order_id FK | product_id FK | product_variant_id FK | product_name VARCHAR(150) | unit_price_cents BIGINT | quantity DECIMAL(10,3) | notes VARCHAR(255) NULL | station_id CHAR(26) FK NULL | status VARCHAR(20) (PENDING, SENT, IN_PREPARATION, READY, DELIVERED, CANCELLED) | `INDEX (order_id)` |
 
 ### `order_item_modifiers`
 | id PK | order_item_id FK | modifier_id FK | modifier_name VARCHAR(80) | price_delta_cents BIGINT |
 
 ### `production_tickets`
-| id | CHAR(26) PK | company_id | unit_id | order_id FK | station_id FK | status VARCHAR(20) (RECEIVED, IN_PREPARATION, READY, DELIVERED, CANCELLED) | received_at | started_at NULL | ready_at NULL | delivered_at NULL | `INDEX (station_id, status)` — a query do KDS |
+| id | CHAR(26) PK | company_id | branch_id | order_id FK | station_id FK | status VARCHAR(20) (RECEIVED, IN_PREPARATION, READY, DELIVERED, CANCELLED) | received_at | started_at NULL | ready_at NULL | delivered_at NULL | `INDEX (station_id, status)` — a query do KDS |
 
 ### `production_ticket_items`
 | id PK | production_ticket_id FK | order_item_id FK | product_name VARCHAR(150) | quantity DECIMAL(10,3) | modifiers_text VARCHAR(255) | notes VARCHAR(255) NULL | status VARCHAR(20) |
@@ -196,23 +256,23 @@ migration final.
 ## 5. Pagamentos & Caixa
 
 ### `payment_methods`
-| id | CHAR(26) PK | company_id | unit_id | name VARCHAR(60) | kind VARCHAR(15) (CASH, PIX, CARD_DEBIT, CARD_CREDIT, VOUCHER, OTHER) | is_active TINYINT(1) | opens_cash_drawer TINYINT(1) | `UNIQUE (unit_id, name)` |
+| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(60) | kind VARCHAR(15) (CASH, PIX, CARD_DEBIT, CARD_CREDIT, VOUCHER, OTHER) | is_active TINYINT(1) | opens_cash_drawer TINYINT(1) | `UNIQUE (branch_id, name)` |
 
 ### `cash_registers`
-| id | CHAR(26) PK | company_id | unit_id | operator_id CHAR(26) FK | status VARCHAR(10) (OPEN/CLOSED) | opened_at | opening_amount_cents BIGINT | closed_at NULL | counted_amount_cents BIGINT NULL | expected_amount_cents BIGINT NULL | difference_cents BIGINT NULL | `UNIQUE (unit_id, operator_id, status)` quando status=OPEN (emular com coluna gerada) |
+| id | CHAR(26) PK | company_id | branch_id | operator_id CHAR(26) FK | status VARCHAR(10) (OPEN/CLOSED) | opened_at | opening_amount_cents BIGINT | closed_at NULL | counted_amount_cents BIGINT NULL | expected_amount_cents BIGINT NULL | difference_cents BIGINT NULL | `UNIQUE (branch_id, operator_id, status)` quando status=OPEN (emular com coluna gerada) |
 
 ### `cash_movements`
 | id | CHAR(26) PK | company_id | cash_register_id FK | type VARCHAR(15) (SALE, WITHDRAWAL, DEPOSIT, CHANGE, ADJUSTMENT) | amount_cents BIGINT (sinal conforme entrada/saída) | payment_id CHAR(26) FK NULL | reason VARCHAR(255) NULL | created_by CHAR(26) | created_at |
 
 ### `payments`
-| id | CHAR(26) PK | company_id | unit_id | command_id FK | cash_register_id FK NULL | method_id FK | kind VARCHAR(15) | amount_cents BIGINT | status VARCHAR(15) (PENDING, CONFIRMED, FAILED, REFUNDED, CANCELLED) | external_ref VARCHAR(80) NULL | idempotency_key VARCHAR(40) NULL | confirmed_at DATETIME(6) NULL | created_by CHAR(26) NULL | `UNIQUE (company_id, idempotency_key)`, `INDEX (command_id, status)`, `INDEX (external_ref)` |
+| id | CHAR(26) PK | company_id | branch_id | command_id FK | cash_register_id FK NULL | method_id FK | kind VARCHAR(15) | amount_cents BIGINT | status VARCHAR(15) (PENDING, CONFIRMED, FAILED, REFUNDED, CANCELLED) | external_ref VARCHAR(80) NULL | idempotency_key VARCHAR(40) NULL | confirmed_at DATETIME(6) NULL | created_by CHAR(26) NULL | `UNIQUE (company_id, idempotency_key)`, `INDEX (command_id, status)`, `INDEX (external_ref)` |
 
 ---
 
 ## 6. Estoque (capability `inventory`)
 
 ### `stocks`
-| id | CHAR(26) PK | company_id | unit_id | name VARCHAR(120) (`Pão brioche`) | unit VARCHAR(10) (`un`,`kg`,`L`) | balance DECIMAL(12,3) | min_balance DECIMAL(12,3) NULL | allow_negative TINYINT(1) DEFAULT 0 | `UNIQUE (unit_id, name)` |
+| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(120) (`Pão brioche`) | unit VARCHAR(10) (`un`,`kg`,`L`) | balance DECIMAL(12,3) | min_balance DECIMAL(12,3) NULL | allow_negative TINYINT(1) DEFAULT 0 | `UNIQUE (branch_id, name)` |
 
 ### `stock_movements`
 | id | CHAR(26) PK | company_id | stock_id FK | type VARCHAR(15) (IN, OUT, ADJUSTMENT, SALE_CONSUMPTION) | qty DECIMAL(12,3) (sinalizado) | balance_after DECIMAL(12,3) | ref_type VARCHAR(20) NULL (`order_item`) | ref_id CHAR(26) NULL | reason VARCHAR(255) NULL | created_by CHAR(26) NULL | created_at | `INDEX (stock_id, created_at)` |
@@ -236,7 +296,7 @@ migration final.
 | — | | `INDEX (published_at)`, `INDEX (aggregate_type, aggregate_id, occurred_at)` |
 
 ### `audit_logs`
-| id | CHAR(26) PK | company_id | unit_id | actor_id CHAR(26) NULL | actor_name VARCHAR(150) | action VARCHAR(60) (`command.discount.authorize`) | target_type VARCHAR(40) | target_id CHAR(26) | summary VARCHAR(255) | metadata JSON NULL | created_at | `INDEX (target_type, target_id)`, `INDEX (company_id, created_at)` |
+| id | CHAR(26) PK | company_id | branch_id | actor_id CHAR(26) NULL | actor_name VARCHAR(150) | action VARCHAR(60) (`command.discount.authorize`) | target_type VARCHAR(40) | target_id CHAR(26) | summary VARCHAR(255) | metadata JSON NULL | created_at | `INDEX (target_type, target_id)`, `INDEX (company_id, created_at)` |
 
 ### `idempotency_keys` (opcional; alternativa a coluna por tabela)
 | key VARCHAR(40) PK junto com company_id | company_id | endpoint VARCHAR(120) | response_hash VARCHAR(64) | created_at | `PRIMARY KEY (company_id, key)` |
@@ -245,17 +305,17 @@ migration final.
 
 ## 8. `display_number` (número amigável)
 
-Sequencial **por unidade e por data operacional**. Implementação simples e
+Sequencial **por filial e por data operacional**. Implementação simples e
 segura contra corrida:
 
 ```sql
 -- tabela de contadores
 CREATE TABLE counters (
   company_id CHAR(26) NOT NULL,
-  unit_id   CHAR(26) NOT NULL,
+  branch_id   CHAR(26) NOT NULL,
   scope     VARCHAR(30) NOT NULL,   -- 'command:2026-08-29'
   value     INT NOT NULL DEFAULT 0,
-  PRIMARY KEY (company_id, unit_id, scope)
+  PRIMARY KEY (company_id, branch_id, scope)
 ) ENGINE=InnoDB;
 ```
 
@@ -267,12 +327,12 @@ No caso de uso, dentro da transação da abertura da comanda:
 ## 9. Diagrama textual (fallback do Mermaid do doc 02)
 
 ```
-companies 1─* units 1─* categories 1─* products 1─* product_variants
-                     units 1─* locations
-                     units 1─* stations
+companies 1─* branches 1─* categories 1─* products 1─* product_variants
+                     branches 1─* locations
+                     branches 1─* stations
 products *─1 stations
 products 1─1 recipes 1─* recipe_items *─1 stocks
-units 1─* stocks 1─* stock_movements
+branches 1─* stocks 1─* stock_movements
 
 companies 1─* users *─* roles 1─* role_permissions
 users *─* roles via user_roles
@@ -299,7 +359,7 @@ payments 1─0..1 cash_movements
 
 | Query real | Índice |
 |------------|--------|
-| Listar comandas abertas da unidade | `commands (unit_id, status)` |
+| Listar comandas abertas da filial | `commands (branch_id, status)` |
 | Achar comanda aberta da mesa X | `commands (company_id, bind_type, bind_ref)` + regra de unicidade |
 | KDS de uma estação | `production_tickets (station_id, status)` |
 | Busca de produto por nome | `products FULLTEXT(name)` |
@@ -317,3 +377,11 @@ payments 1─0..1 cash_movements
 | 2026-08-29 | Versão inicial. |
 | 2026-08-29 | Contrato passa a ser materializado por migrations Phinx (ADR-011), não Laravel. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
+| 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
+| 2026-08-30 | `user_roles.branch_id` NOT NULL DEFAULT `''` (sentinela, era NULL na PK). Adicionada `api_tokens` (auth por bearer token, M1.f). |
+| 2026-10-23 | Migrations passam a ser Doctrine Migrations (ADR-012). |
+| 2026-10-23 | `user_roles` ganha `id` próprio; `branch_id` vira FK nullable (`NULL` = empresa toda), unicidade garantida pelo agregado `User`. Datas: DATETIME(6) via tipos sobrescritos do DBAL. |
+| 2026-10-23 | M1.2: `discount_limits` removida — limite vira `roles.max_discount_percent`. `role_permissions` PK `(permission, role_id)` + índice em `role_id`. Login por slug + e-mail; PIN após escolher o usuário. |
+| 2026-10-23 | M1.3: tabela `devices` (aparelho pareado); `api_tokens` com prefixo `u_` e expiração deslizante. |
+| 2026-10-26 | M2: cardápio por filial; sem `products.base_price_cents` — todo produto tem ≥1 variação, `product_variant_id` obrigatório em `command_items`/`order_items`; `stations`/`categories` com timestamps; FKs de ID por convenção (ADR-012). |
+| 2026-10-26 | M2.2: `modifier_groups` sem `is_required` (derivado de `min_select`), grupos por produto; nomes únicos por produto/grupo; `products` com `INDEX (branch_id, is_active)` e timestamps. |

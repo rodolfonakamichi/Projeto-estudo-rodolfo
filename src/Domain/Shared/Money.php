@@ -7,7 +7,7 @@ namespace App\Domain\Shared;
 final readonly class Money
 {
     private function __construct(
-        private int    $cents,
+        private int $cents,
         private string $currency,
     ) {
     }
@@ -49,15 +49,13 @@ final readonly class Money
 
     public function isZero(): bool
     {
-        return $this->cents === 0;
+        return 0 === $this->cents;
     }
 
     private function assertSameCurrency(self $other): void
     {
         if ($this->currency !== $other->currency) {
-            throw new \InvalidArgumentException(
-                "Moedas diferentes: {$this->currency} e {$other->currency}.",
-            );
+            throw new \InvalidArgumentException("Moedas diferentes: {$this->currency} e {$other->currency}.");
         }
     }
 
@@ -65,12 +63,13 @@ final readonly class Money
      * Divide o valor em partes proporcionais aos pesos, sem perder nem criar
      * centavo — a soma das partes é sempre igual ao total.
      *
-     * @param  list<int> $ratios pesos (ex.: [1,1,1] = 3 partes iguais; [70,30])
+     * @param list<int> $ratios pesos (ex.: [1,1,1] = 3 partes iguais; [70,30])
+     *
      * @return list<self>
      */
     public function allocate(array $ratios): array
     {
-        if ($ratios === []) {
+        if ([] === $ratios) {
             throw new \InvalidArgumentException('allocate() exige ao menos um peso.');
         }
 
@@ -94,14 +93,14 @@ final readonly class Money
 
         // 2) os centavos que sobraram vão 1 a 1, começando pela primeira parte
         $remainder = $this->cents - $distributed;
-        for ($i = 0; $i < $remainder; $i++) {
-            $parts[$i] += 1;
+        for ($index = 0; $index < $remainder; ++$index) {
+            ++$parts[$index];
         }
 
         // 3) transforma cada valor de volta em Money
-        return array_map(
+        return array_values(array_map(
             fn (int $cents): self => new self($cents, $this->currency),
             $parts,
-        );
+        ));
     }
 }

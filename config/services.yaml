@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# Ponto de entrada da configuração dos NOSSOS serviços.
+# packages/ configura as dependências (Doctrine, Messenger...).
+
+parameters:
+    # Ociosidade do token de usuário (ISO 8601): expira 12h após o último uso
+    app.auth.user_token_idle: 'PT12H'
+    # bcrypt: caro de propósito (força bruta). Em teste, o mínimo (ver when@test)
+    app.password_hash_cost: 12
+
+services:
+    _defaults:
+        autowire: true      # injeta dependências pelo tipo do construtor
+        autoconfigure: true # registra comandos, controllers, handlers... pelos atributos
+
+    # Todas as classes de src/ viram serviço (id = FQCN)...
+    App\:
+        resource: '../src/'
+        exclude:
+            # ...menos o Domain: entidades e Value Objects são criados com `new`
+            # ou named constructors, nunca pelo container (ADR-002).
+            - '../src/Domain/'
+            - '../src/Kernel.php'
+
+    # Handlers de caso de uso -> command.bus. Basta implementar a interface.
+    _instanceof:
+        App\Application\Shared\Bus\CommandHandler:
+            tags: [{ name: messenger.message_handler, bus: command.bus }]
+        App\Application\Shared\Bus\EventHandler:
+            tags: [{ name: messenger.message_handler, bus: event.bus }]
+
+    # Portas do Domain -> adapters da Infrastructure. O Domain está excluído
+    # acima, então o autowiring não liga a interface à implementação sozinho:
+    # a ligação fica explícita aqui (um lugar só para trocar um adapter).
+    App\Domain\Identity\CompanyRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineCompanyRepository'
+    App\Domain\Identity\UserRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineUserRepository'
+    App\Domain\Identity\RoleRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineRoleRepository'
+    App\Domain\Identity\PasswordHasher: '@App\Infrastructure\Security\NativePasswordHasher'
+    App\Domain\Identity\ApiTokenRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineApiTokenRepository'
+    App\Domain\Identity\DeviceRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineDeviceRepository'
+    App\Domain\Catalog\StationRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineStationRepository'
+    App\Domain\Catalog\CategoryRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineCategoryRepository'
+    App\Domain\Catalog\ProductRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineProductRepository'
+
+    App\Application\Identity\Auth\TokenPolicy:
+        arguments: ['%app.auth.user_token_idle%']
+    App\Application\Identity\Auth\DeviceUsersQuery: '@App\Infrastructure\Persistence\Dbal\DbalDeviceUsersQuery'
+    App\Application\Catalog\CatalogQuery: '@App\Infrastructure\Persistence\Dbal\DbalCatalogQuery'
+    # Multiempresa (M1.4): a Application só lê o contexto; quem entra nele é a
+    # autenticação. ResetInterface → tag kernel.reset pelo autoconfigure.
+    App\Application\Shared\Context\CompanyContextProvider: '@App\Infrastructure\Security\CompanyContextHolder'
+
+    App\Infrastructure\Security\NativePasswordHasher:
+        arguments: ['%app.password_hash_cost%']
+
+when@test:
+    parameters:
+        app.password_hash_cost: 4

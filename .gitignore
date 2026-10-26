@@ -1,30 +1,33 @@
 # IDE - PhpStorm / IntelliJ
 /.idea/
 
-# Dependências
-/vendor/
-/node_modules/
-
-# Ambiente
-.env
-.env.local
-.env.*.local
-
-# Logs e cache
-*.log
-/var/
-/cache/
-/tmp/
-
 # Sistema operacional
 .DS_Store
 Thumbs.db
 
-# Build
-/build/
-/dist/
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
 /vendor/
-/.env
-/.phpunit.result.cache
-/.php-cs-fixer.cache
+###< symfony/framework-bundle ###
 
+###> ferramentas ###
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/.deptrac.cache
+###< ferramentas ###
+
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+/.deptrac.cache
+###< friendsofphp/php-cs-fixer ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
