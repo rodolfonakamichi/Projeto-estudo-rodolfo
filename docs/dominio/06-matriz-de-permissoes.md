@@ -132,6 +132,11 @@ Formato `contexto.recurso.ação`.
 | report.audit.view | ● | ● | ● | — | — | — | — | — | ● |
 | report.production.view | ● | ● | ● | — | — | ● | ● | — | ● |
 
+> **Preço (M2.3):** toda operação que DEFINE valor exige `catalog.price.manage`
+> além de `catalog.product.manage` — criar produto, criar variação, mudar preço,
+> criar grupo/modificador. Renomear, mover de categoria, ligar/desligar não.
+> Assim um papel só de cardápio edita textos sem mexer em preço.
+>
 > `report.sales.view ▲` para CASHIER = só o **fechamento do próprio turno**, não
 > o histórico da empresa. `catalog.price.manage ▲` para MANAGER = dentro da
 > filial dele. `admin.capability.manage ▲` para ADMIN = não pode desligar
@@ -238,3 +243,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-10-23 | Limite de desconto passa a ser coluna de `roles`. Matriz §3 materializada em `Domain\Identity\DefaultRoles` (▲ = concedida); permissões como enum `Permission`; checagem em `User::can()`. |
 | 2026-10-23 | Nova permissão `admin.device.manage` (OWNER/ADMIN/MANAGER) para parear aparelhos (M1.3). Permissão nova = atualizar `DefaultRoles` + migration de dados para empresas existentes. |
 | 2026-10-26 | M1.5: §6 reflete o código — `PermissionChecker` (ator explícito) + `PermissionVoter`; endpoints de UX contextual `/api/me/permissions`. |
+| 2026-10-26 | M2.3: regra de preço — operação que define valor exige `catalog.price.manage` junto com `catalog.product.manage`. |

@@ -24,7 +24,7 @@ final readonly class ArchiveCategoryHandler implements CommandHandler
     public function __invoke(ArchiveCategory $command): void
     {
         $category = $this->categories->get(CategoryId::fromString($command->categoryId));
-        $this->authorizer->authorize(UserId::fromString($command->actorId), Permission::CatalogProductManage, $category->branchId());
+        $this->authorizer->authorize(UserId::fromString($command->actorId), $category->branchId(), Permission::CatalogProductManage);
 
         $category->archive($this->clock->now());
     }

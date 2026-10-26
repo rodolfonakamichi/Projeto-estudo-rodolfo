@@ -23,7 +23,7 @@ final readonly class UpdateCategoryHandler implements CommandHandler
     public function __invoke(UpdateCategory $command): void
     {
         $category = $this->categories->get(CategoryId::fromString($command->categoryId));
-        $this->authorizer->authorize(UserId::fromString($command->actorId), Permission::CatalogProductManage, $category->branchId());
+        $this->authorizer->authorize(UserId::fromString($command->actorId), $category->branchId(), Permission::CatalogProductManage);
 
         if (null !== $command->name) {
             if ($this->categories->nameExists($category->branchId(), $command->name, except: $category->id())) {

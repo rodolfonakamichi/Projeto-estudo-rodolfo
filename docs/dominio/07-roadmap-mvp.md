@@ -331,3 +331,4 @@ autoatendimento pleno, API pública, marketplace de integrações.
 | 2026-10-26 | M1.5 entregue: `PermissionChecker` + `PermissionVoter`, `CapabilityChecker`; aceite HTTP via `GET /api/me/permissions/{code}` (o `command.close` real nasce no M3). |
 | 2026-10-26 | M1.6 entregue: `app:seed-demo` (empresa `demo` com mesas+cozinha, filial Matriz, 1 usuário por papel, via casos de uso). **M1 concluído**; `counters` segue para o M3. |
 | 2026-10-26 | M2 dividido em M2.1 (estações + categorias), M2.2 (agregado Product), M2.3 (API de produto), M2.4 (busca), M2.5 (atalhos). Telas admin adiadas: só API até o front entrar no roadmap. |
+| 2026-10-26 | M2.3 entregue: API de produto (variações, grupos, modificadores); aceites Chopp e X-Burger pela API. Rotas sem o prefixo `/catalog`: `/api/branches/{id}/products`, `/api/products/{id}/...`. |

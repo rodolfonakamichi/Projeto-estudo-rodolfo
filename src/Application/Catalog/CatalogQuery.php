@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Catalog;
 
+use App\Domain\Catalog\CategoryId;
+use App\Domain\Catalog\ProductId;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
 
@@ -19,4 +21,9 @@ interface CatalogQuery
 
     /** @return list<CategoryView> só as não arquivadas, na ordem do cardápio */
     public function categories(CompanyId $companyId, BranchId $branchId): array;
+
+    /** @return list<ProductView> ativos e inativos, por nome; opcionalmente de uma categoria */
+    public function products(CompanyId $companyId, BranchId $branchId, ?CategoryId $categoryId = null): array;
+
+    public function product(CompanyId $companyId, ProductId $productId): ?ProductView;
 }

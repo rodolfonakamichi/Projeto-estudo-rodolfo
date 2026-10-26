@@ -12,11 +12,11 @@ use App\Domain\Catalog\NewModifier;
 use App\Domain\Catalog\NewVariant;
 use App\Domain\Catalog\Product;
 use App\Domain\Catalog\ProductId;
+use App\Domain\Catalog\ProductRepository;
 use App\Domain\Catalog\ProductVariantId;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
 use App\Domain\Shared\Money;
-use App\Infrastructure\Persistence\Doctrine\Repository\DoctrineProductRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -39,9 +39,8 @@ final class ProductPersistenceTest extends KernelTestCase
             new NewModifier(ModifierId::generate(), 'Bacon', Money::fromCents(400)),
         ]);
 
-        // sem consumidor no container até os casos de uso do M2.3: monta o adapter direto
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $repository = new DoctrineProductRepository($entityManager);
+        $repository = self::getContainer()->get(ProductRepository::class);
         $repository->save($burger);
         $entityManager->flush();
         $entityManager->clear();
