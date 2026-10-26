@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M2.4 implementado na branch `feat/m2.4-busca`, aguardando revisão/commit/PR). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M2.5 implementado na branch `feat/m2.5-atalhos-operador`, aguardando commit/PR — fecha o M2). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch main && git pull` e
 > `docker compose up -d`.
@@ -19,8 +19,8 @@
   M1→M2.2 foram feitos) está toda na `main` e não é mais usada.
 - Histórico antigo: `m1-identidade` = `f68f4f0` (migrations Phinx descartadas).
 - **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 `c8a19e3`.
-  M2.3 `1db325a` (PR #5). M2.4 implementado em `feat/m2.4-busca` (não commitado).
-  Próximo: **M2.5 — atalhos do operador**.
+  M2.3 `1db325a` (PR #5). M2.4 `208b2db` (PR #6). M2.5 implementado em
+  `feat/m2.5-atalhos-operador` (não commitado) — **fecha o M2**. Próximo: **M3 — Comanda + Pedido**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -197,7 +197,7 @@ além de `catalog.product.manage`.
 | API: `GET/POST /api/branches/{id}/products[?categoryId=]`, `GET/PATCH /api/products/{id}`, `POST .../variants`, `PATCH .../variants/{id}`, `POST .../modifier-groups`, `PATCH .../modifier-groups/{id}`, `POST .../modifiers`, `PATCH .../modifiers/{id}` — respostas devolvem o produto atualizado | `src/Presentation/Http/Catalog/ProductController.php` |
 | Testes: aceites Chopp/X-Burger pela API, 422 com mensagem do Domain, preço × papel "CARDAPISTA", PATCH ausente × null, isolamento — 119 verdes | `tests/Presentation/Http/Catalog/ProductApiTest.php` |
 
-### M2.4 — busca (branch `feat/m2.4-busca`, não commitado)
+### M2.4 — busca (commit `208b2db`, PR #6)
 | Entrega | Onde |
 |---|---|
 | Índice `FULLTEXT ft_products_name` + migration | `Catalog.Product.orm.xml`, `migrations/Version20261026203908.php` |
@@ -207,6 +207,21 @@ além de `catalog.product.manage`.
 | `app:seed-demo-catalog [--extra=N]`: cardápio real (Chopp, X-Burger, Caipirinha...) + N sintéticos, pelos casos de uso | `src/Presentation/Console/Demo/` |
 | Testes: unit do `FulltextQuery`; aceite "Chopp em < 50 ms com 1k" (mediana de 5) + `EXPLAIN` usa o índice — commitando de verdade (`#[SkipDatabaseRollback]`) — 128 verdes | `tests/Infrastructure/`, `tests/Presentation/Http/Catalog/CatalogSearchTest.php` |
 
+### M2.5 — atalhos do operador (branch `feat/m2.5-atalhos-operador`, não commitado)
+Decisões do usuário: favoritos **por operador e filial**; endpoint de atalhos já
+no formato final (`recent`/`topSelling` vazios até o M3); o fix abaixo vai junto.
+
+| Entrega | Onde |
+|---|---|
+| Agregado `OperatorFavorites` + `FavoriteProduct` (PK composta); `replace()` compara listas em vez de recriar | `src/Domain/Catalog/` |
+| `SetFavoriteProducts` (pede `command.item.add`; produto da filial e ativo) | `src/Application/Catalog/Favorites/` |
+| `CatalogQuery::favorites()` + `ShortcutsView` | `src/Application/Catalog/`, `DbalCatalogQuery` |
+| `GET /api/branches/{id}/shortcuts`, `PUT /api/branches/{id}/shortcuts/favorites` | `ShortcutsController` |
+| `IdentifierForeignKeys`: FKs `product_id`/`user_id`; pula só a referência à própria tabela | `.../Doctrine/Schema/` |
+| **Fix (bug do M1.2):** `IdentifierType` aceita string que seja ULID válido — o Doctrine achata a associação da PK composta no UPDATE/DELETE (revogar permissão quebrava no flush) | `.../Doctrine/Type/IdentifierType.php`, `RolePermissionPersistenceTest` |
+| Migration operator_favorites, operator_favorite_items | `migrations/Version20261026205421.php` |
+| Testes: unit do agregado, API (reordenar, lista por pessoa, inativo some, 403 cozinha, 404 outra empresa) — 136 verdes | `tests/` |
+
 ---
 
 ## Próximos passos — M2 (Catálogo)
@@ -215,7 +230,9 @@ além de `catalog.product.manage`.
 2. ~~M2.2 — agregado `Product`~~.
 3. ~~M2.3 — API de produto~~.
 4. ~~M2.4 — busca~~.
-5. **M2.5 — atalhos do operador** (só estrutura).
+5. ~~M2.5 — atalhos do operador~~. **M2 concluído.**
+6. **M3 — Comanda + Pedido** (doc 07): o núcleo — `Command`, `Order`, máquinas
+   de estado (doc 04), outbox (doc 05). Preencher `recent`/`topSelling` dos atalhos.
 
 ## Histórico de próximos passos — M1 sobre Symfony
 
@@ -247,8 +264,9 @@ além de `catalog.product.manage`.
   ao inicializar um proxy lazy-ghost).
 - **Enum em campo de PK** não é aceito no XML do Doctrine → guardar string e
   converter na entidade (`RolePermission`).
-- **`findBy` por associação** com IDs tipados: passar o objeto (`CompanyId`),
-  não `->toString()` — o tipo DBAL rejeita string de propósito.
+- **`findBy` por associação** com IDs tipados: passar o objeto (`CompanyId`).
+  O tipo DBAL aceita string só se for ULID válido (desde o M2.5: o Doctrine
+  achata a associação de PK composta para string no UPDATE/DELETE).
 - **Domain fora do container** → interface de porta precisa de alias explícito
   em `config/services.yaml`, senão "Cannot autowire ... has been excluded".
 - **DATETIME(6):** criar só um tipo novo deixava o diff eterno (introspecção lê

@@ -33,6 +33,9 @@ final class IdentifierForeignKeys
         // catálogo arquiva em vez de apagar: apagar em uso deve falhar
         'category_id' => ['categories', null],
         'station_id' => ['stations', null],
+        // produto também não se apaga (desativa); comanda/pedido vão apontar para ele
+        'product_id' => ['products', null],
+        'user_id' => ['users', 'CASCADE'],
     ];
 
     public function postGenerateSchema(GenerateSchemaEventArgs $event): void
@@ -45,11 +48,16 @@ final class IdentifierForeignKeys
 
             foreach ($metadata->fieldMappings as $field => $mapping) {
                 $reference = self::REFERENCES[$mapping->type] ?? null;
-                if (null === $reference || $metadata->isIdentifier($field)) {
+                if (null === $reference) {
                     continue;
                 }
 
                 [$foreignTable, $onDelete] = $reference;
+                // o `id` da própria tabela não é FK (mas parte de PK composta que aponta para outra tabela é)
+                if ($foreignTable === $tableName) {
+                    continue;
+                }
+
                 $foreignKeys[] = new ForeignKeyConstraint(
                     localColumnNames: [$mapping->columnName],
                     foreignTableName: $foreignTable,

@@ -42,6 +42,7 @@ services:
     App\Domain\Catalog\StationRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineStationRepository'
     App\Domain\Catalog\CategoryRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineCategoryRepository'
     App\Domain\Catalog\ProductRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineProductRepository'
+    App\Domain\Catalog\OperatorFavoritesRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineOperatorFavoritesRepository'
 
     App\Application\Identity\Auth\TokenPolicy:
         arguments: ['%app.auth.user_token_idle%']

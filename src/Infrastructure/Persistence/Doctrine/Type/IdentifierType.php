@@ -13,6 +13,11 @@ use Doctrine\DBAL\Types\Type;
  * Converte um ID tipado do Domain (CompanyId, UserId...) ⇄ CHAR(26) (ADR-005).
  * Cada ID ganha uma subclasse de 3 linhas que só diz qual classe é
  * (Template Method: o algoritmo fica aqui, o detalhe na subclasse).
+ *
+ * Na ida para o banco aceita o objeto OU uma string que seja ULID válido: em
+ * PK composta com associação (RolePermission, FavoriteProduct) o próprio
+ * Doctrine "achata" o ID da associação para string no UPDATE/DELETE. Qualquer
+ * outra coisa (string que não é ULID, objeto de outro tipo) continua erro.
  */
 abstract class IdentifierType extends Type
 {
@@ -44,6 +49,13 @@ abstract class IdentifierType extends Type
         }
         if ($value instanceof Identifier) {
             return $value->toString();
+        }
+        if (\is_string($value)) {
+            try {
+                return $this->identifierClass()::fromString($value)->toString();
+            } catch (\InvalidArgumentException $exception) {
+                throw ValueNotConvertible::new($value, $this->identifierClass(), $exception->getMessage(), $exception);
+            }
         }
 
         throw new \InvalidArgumentException(\sprintf('Esperado %s, recebido %s.', $this->identifierClass(), get_debug_type($value)));

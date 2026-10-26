@@ -20,6 +20,7 @@ doctrine:
             product_variant_id: App\Infrastructure\Persistence\Doctrine\Type\ProductVariantIdType
             modifier_group_id: App\Infrastructure\Persistence\Doctrine\Type\ModifierGroupIdType
             modifier_id: App\Infrastructure\Persistence\Doctrine\Type\ModifierIdType
+            operator_favorites_id: App\Infrastructure\Persistence\Doctrine\Type\OperatorFavoritesIdType
             money: App\Infrastructure\Persistence\Doctrine\Type\MoneyType
             slug: App\Infrastructure\Persistence\Doctrine\Type\SlugType
             email: App\Infrastructure\Persistence\Doctrine\Type\EmailType

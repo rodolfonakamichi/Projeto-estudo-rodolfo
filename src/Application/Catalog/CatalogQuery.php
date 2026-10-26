@@ -8,6 +8,7 @@ use App\Domain\Catalog\CategoryId;
 use App\Domain\Catalog\ProductId;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
+use App\Domain\Identity\UserId;
 
 /**
  * Leitura do catálogo (lado "Query" do CQRS): SQL direto, devolve DTOs prontos
@@ -34,4 +35,7 @@ interface CatalogQuery
      * @return list<ProductView>
      */
     public function search(CompanyId $companyId, BranchId $branchId, string $text, int $limit = 20): array;
+
+    /** @return list<ProductView> favoritos do operador na filial, na ordem dele; só os ativos */
+    public function favorites(CompanyId $companyId, BranchId $branchId, UserId $userId): array;
 }
