@@ -14,6 +14,8 @@ doctrine:
             user_role_id: App\Infrastructure\Persistence\Doctrine\Type\UserRoleIdType
             api_token_id: App\Infrastructure\Persistence\Doctrine\Type\ApiTokenIdType
             device_id: App\Infrastructure\Persistence\Doctrine\Type\DeviceIdType
+            station_id: App\Infrastructure\Persistence\Doctrine\Type\StationIdType
+            category_id: App\Infrastructure\Persistence\Doctrine\Type\CategoryIdType
             slug: App\Infrastructure\Persistence\Doctrine\Type\SlugType
             email: App\Infrastructure\Persistence\Doctrine\Type\EmailType
             role_code: App\Infrastructure\Persistence\Doctrine\Type\RoleCodeType

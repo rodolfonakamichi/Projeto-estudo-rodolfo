@@ -13,9 +13,11 @@ use Doctrine\ORM\Query\Filter\SQLFilter;
  * no SQL de TODA consulta do ORM — find(), findBy(), DQL, JOINs e carga
  * preguiçosa de associações. Ligado pelo CompanyContextHolder.
  *
- * Convenção: entidade da empresa = tem a associação `company`. Filhas de
- * agregado sem `company` (UserRole, RolePermission) só são alcançáveis pela
- * raiz, que já é filtrada — o CompanyFilterCoverageTest trava essa lista.
+ * Convenção: entidade da empresa = tem a associação `company` (Identity) ou o
+ * campo `companyId` (contextos que referenciam por ID, como o Catálogo).
+ * Filhas de agregado sem nenhum dos dois (UserRole, RolePermission) só são
+ * alcançáveis pela raiz, que já é filtrada — o CompanyFilterCoverageTest trava
+ * essa lista.
  *
  * Não cobre DBAL/SQL puro (read models em Persistence\Dbal): lá o filtro por
  * empresa é escrito à mão.
@@ -30,6 +32,7 @@ final class CompanyFilter extends SQLFilter
         $column = match (true) {
             Company::class === $targetEntity->getName() => $targetEntity->getSingleIdentifierColumnName(),
             $targetEntity->hasAssociation('company') => $targetEntity->getSingleAssociationJoinColumnName('company'),
+            $targetEntity->hasField('companyId') => $targetEntity->getColumnName('companyId'),
             default => null,
         };
 

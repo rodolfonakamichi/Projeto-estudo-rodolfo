@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M1.6 implementado, aguardando revisão/commit — fecha o M1). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M2.1 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -17,9 +17,10 @@
   (aproveita os docs atualizados e os VOs do M1).
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
-- **Milestone atual:** **M1** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
-  M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. **M1.6 — seed demo**
-  implementado (não commitado) — **fecha o M1**. Próximo: **M2 — Catálogo**.
+- **Milestone atual:** **M2 — Catálogo.** M2.1 implementado (não commitado).
+  Próximo: **M2.2 — agregado Product**.
+- **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
+  M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -143,16 +144,44 @@ real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
 | `PairDeviceHandler` usa o `PermissionChecker` | `src/Application/Identity/Auth/` |
 | Testes: aceite WAITER 403 / CASHIER 204 em `command.close`, `hotel` = false — 83 verdes | `tests/Presentation/Http/Identity/`, `tests/Integration/Identity/` |
 
-### M1.6 — seed demo (não commitado)
+### M1.6 — seed demo (commit `db5789c`)
 | Entrega | Onde |
 |---|---|
 | `app:seed-demo`: empresa `demo` (tables+kitchen, sem hotel), filial Matriz, 1 usuário por papel (`dono@`, `admin@`, `auditor@` na empresa toda; `gerente@`, `caixa@`, `garcom@`, `cozinha@`, `bar@`, `estoque@` na Matriz), senha `demo1234`, PIN `1234` para quem opera | `src/Presentation/Console/Demo/SeedDemoCommand.php` |
 | Despacha os casos de uso (não SQL) numa transação só; idempotente; recusa rodar em `prod` | idem |
 | Testes: 1 usuário por papel, `hotel` = false na demo, reexecução não duplica — 85 verdes | `tests/Presentation/Console/` |
 
+### M2.1 — estações e categorias (não commitado)
+Decisões do usuário (2026-10-26): cardápio **por filial**; **todo produto tem
+≥1 variação** (sem `base_price_cents`); **só API** (telas admin adiadas);
+**referência entre agregados por ID** (doc 02), com FK no banco por convenção.
+
+| Entrega | Onde |
+|---|---|
+| Agregados `Station` e `Category` (arquivar em vez de apagar), IDs, repositórios, `NotFound` | `src/Domain/Catalog/` |
+| `Domain\Shared\NotFound` → HTTP 404 (os `*NotFound` de Identity passam a herdar dele) | `src/Domain/Shared/`, `ApiExceptionListener` |
+| `BranchAuthorizer`: filial da empresa do ator (404) → ativa → permissão (403); devolve a empresa | `src/Application/Identity/Authorization/` |
+| Casos de uso `CreateStation` (exige `kitchen`), `UpdateStation`, `CreateCategory`, `UpdateCategory`, `ArchiveCategory` | `src/Application/Catalog/` |
+| Read model `CatalogQuery` → `DbalCatalogQuery` | `src/Application/Catalog/`, `src/Infrastructure/Persistence/Dbal/` |
+| `IdentifierForeignKeys` (listener `postGenerateSchemaTable`): FK para todo campo de ID tipado | `src/Infrastructure/Persistence/Doctrine/Schema/` |
+| `CompanyFilter` reconhece o campo `companyId` | `.../Doctrine/Filter/` |
+| Migration `stations`, `categories` | `migrations/Version20261026201102.php` |
+| API: `GET/POST /api/branches/{id}/stations`, `PATCH /api/stations/{id}`, `GET/POST /api/branches/{id}/categories`, `PATCH/DELETE /api/categories/{id}` | `src/Presentation/Http/Catalog/` |
+| Testes: unit de Station/Category, HTTP (permissão, capability, nome único, isolamento 404, arquivar) — 97 verdes; trait `JsonApiClient` | `tests/` |
+
 ---
 
-## Próximos passos — M1 sobre Symfony
+## Próximos passos — M2 (Catálogo)
+
+1. ~~M2.1 — estações e categorias~~.
+2. **M2.2 — agregado `Product`**: `ProductVariant[]` (≥1 ativa), `ModifierGroup[]`
+   → `Modifier[]` (min/max coerente), categoria e estação por ID; migrations.
+3. **M2.3 — API de produto**; aceite "Chopp 300/500ml" e "X-Burger com Ponto
+   (1 obrigatório) e Adicionais (0–5)".
+4. **M2.4 — busca** `GET /catalog/search?q=` (FULLTEXT) + seed de 1k produtos, < 50 ms.
+5. **M2.5 — atalhos do operador** (só estrutura).
+
+## Histórico de próximos passos — M1 sobre Symfony
 
 1. ~~Agregado Company~~ (M1.1). ~~User + Role~~ (M1.2).
 2. ~~Autenticação~~ (M1.3).
@@ -210,6 +239,9 @@ real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
 - **Serviço privado sem consumidor** some do container compilado (o teste não
   acha com `getContainer()->get()`): montar à mão no teste até ter consumidor
   (`CapabilityChecker`).
+- **Listener que reconstrói tabela** (`setClassTable` com `Table::edit()`) perde
+  as opções (charset) — conferir o `DEFAULT CHARACTER SET` na migration gerada.
+- **Rota com `Requirement::ULID`**: ID malformado vira 404 antes do controller.
 - **Nomes por extenso:** `$entityManager`, `$exception`, `$permission`... nunca
   sílaba. Única exceção combinada: `$db`.
 - **Método de trabalho:** explicar cada conceito/padrão ao aplicar; usar as

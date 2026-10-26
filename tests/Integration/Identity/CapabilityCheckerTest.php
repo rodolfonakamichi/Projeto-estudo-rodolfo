@@ -10,7 +10,6 @@ use App\Application\Shared\Bus\CommandBus;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\Capability;
 use App\Domain\Identity\CompanyId;
-use App\Domain\Identity\CompanyRepository;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** Aceite M1.5 (doc 07): CapabilityChecker retorna false para `hotel` num bar. */
@@ -28,9 +27,7 @@ final class CapabilityCheckerTest extends KernelTestCase
             capabilities: [Capability::Tables, Capability::Kitchen],
         ));
 
-        // ainda sem consumidor no container (os módulos chegam no M2+), então o
-        // serviço privado é removido na compilação: monta com o repositório real
-        $checker = new CapabilityChecker(self::getContainer()->get(CompanyRepository::class));
+        $checker = self::getContainer()->get(CapabilityChecker::class);
 
         self::assertTrue($checker->has($companyId, Capability::Tables));
         self::assertTrue($checker->has($companyId, Capability::Kitchen));

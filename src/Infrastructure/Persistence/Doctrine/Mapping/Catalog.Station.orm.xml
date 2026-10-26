@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 §2. Empresa/filial por ID (campo, não associação): a FK vem do IdentifierForeignKeys -->
+    <entity name="App\Domain\Catalog\Station" table="stations">
+        <unique-constraints>
+            <unique-constraint name="uniq_stations_branch_name" columns="branch_id,name"/>
+        </unique-constraints>
+
+        <id name="id" type="station_id"/>
+
+        <field name="companyId" column="company_id" type="company_id"/>
+        <field name="branchId" column="branch_id" type="branch_id"/>
+        <field name="name" length="60"/>
+        <field name="active" column="is_active" type="boolean"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+        <field name="updatedAt" column="updated_at" type="datetime_immutable"/>
+    </entity>
+</doctrine-mapping>

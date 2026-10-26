@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
-use App\Domain\Shared\DomainException;
+use App\Domain\Shared\NotFound;
 
-final class CompanyNotFound extends DomainException
+final class CompanyNotFound extends NotFound
 {
     public static function withId(CompanyId $id): self
     {

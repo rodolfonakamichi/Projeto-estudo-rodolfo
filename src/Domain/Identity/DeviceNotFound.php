@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
-use App\Domain\Shared\DomainException;
+use App\Domain\Shared\NotFound;
 
-final class DeviceNotFound extends DomainException
+final class DeviceNotFound extends NotFound
 {
     public static function withId(DeviceId $id): self
     {

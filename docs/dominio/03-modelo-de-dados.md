@@ -121,7 +121,9 @@ migration final.
 ## 2. Catálogo
 
 ### `categories`
-| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(120) | sort_order INT | archived_at DATETIME(6) NULL | `UNIQUE (branch_id, name)` |
+| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(120) | sort_order INT | archived_at DATETIME(6) NULL | created_at, updated_at | `UNIQUE (branch_id, name)` |
+
+> Cardápio **por filial** (decisão 2026-10-26). Categoria não é apagada, é arquivada.
 
 ### `products`
 | Coluna | Tipo | Notas |
@@ -131,7 +133,6 @@ migration final.
 | category_id | CHAR(26) FK NULL | |
 | name | VARCHAR(150) | |
 | kind | VARCHAR(20) | `PRODUCT` / `SERVICE` (service = Fase 3) |
-| base_price_cents | BIGINT NULL | usado se não houver variação |
 | station_id | CHAR(26) FK NULL | estação padrão de produção |
 | track_stock | TINYINT(1) | se gera baixa de estoque |
 | is_active | TINYINT(1) | |
@@ -139,6 +140,10 @@ migration final.
 
 ### `product_variants`
 | id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`300ml`) | price_cents BIGINT | sku VARCHAR(60) NULL | is_active TINYINT(1) | sort_order INT |
+
+> **Todo produto tem ≥1 variação** (decisão 2026-10-26): o preço mora só aqui.
+> Produto sem tamanho ganha uma variação padrão. Assim o item da comanda/pedido
+> sempre aponta para uma variação — um caminho só de preço.
 
 ### `modifier_groups`
 | id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`Ponto`, `Adicionais`) | min_select INT | max_select INT | is_required TINYINT(1) | sort_order INT |
@@ -151,7 +156,7 @@ migration final.
 `recipe_items`: | id PK | recipe_id FK | stock_id CHAR(26) FK → stocks | qty DECIMAL(10,3) | unit VARCHAR(10) |
 
 ### `stations` (capability `kitchen`)
-| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(60) (`COZINHA`,`BAR`) | is_active TINYINT(1) | `UNIQUE (branch_id, name)` |
+| id | CHAR(26) PK | company_id | branch_id | name VARCHAR(60) (`COZINHA`,`BAR`) | is_active TINYINT(1) | created_at, updated_at | `UNIQUE (branch_id, name)` |
 
 ---
 
@@ -201,7 +206,7 @@ migration final.
 | command_id | CHAR(26) FK | |
 | order_id | CHAR(26) FK NULL | pedido que originou (MVP: sempre preenchido) |
 | product_id | CHAR(26) FK | |
-| product_variant_id | CHAR(26) FK NULL | |
+| product_variant_id | CHAR(26) FK | sempre preenchido (todo produto tem variação) |
 | product_name | VARCHAR(150) | **cópia** no momento do lançamento |
 | unit_price_cents | BIGINT | **cópia** (não muda se o cardápio mudar) |
 | quantity | DECIMAL(10,3) | |
@@ -231,7 +236,7 @@ migration final.
 | id | CHAR(26) PK | company_id | branch_id | command_id FK | channel VARCHAR(15) | placed_by CHAR(26) NULL | status VARCHAR(20) (CREATED, SENT, PARTIALLY_READY, READY, DELIVERED, CANCELLED) | created_at | sent_at DATETIME(6) NULL | `INDEX (command_id)`, `INDEX (branch_id, status)` |
 
 ### `order_items`
-| id | CHAR(26) PK | company_id | order_id FK | product_id FK | product_variant_id FK NULL | product_name VARCHAR(150) | unit_price_cents BIGINT | quantity DECIMAL(10,3) | notes VARCHAR(255) NULL | station_id CHAR(26) FK NULL | status VARCHAR(20) (PENDING, SENT, IN_PREPARATION, READY, DELIVERED, CANCELLED) | `INDEX (order_id)` |
+| id | CHAR(26) PK | company_id | order_id FK | product_id FK | product_variant_id FK | product_name VARCHAR(150) | unit_price_cents BIGINT | quantity DECIMAL(10,3) | notes VARCHAR(255) NULL | station_id CHAR(26) FK NULL | status VARCHAR(20) (PENDING, SENT, IN_PREPARATION, READY, DELIVERED, CANCELLED) | `INDEX (order_id)` |
 
 ### `order_item_modifiers`
 | id PK | order_item_id FK | modifier_id FK | modifier_name VARCHAR(80) | price_delta_cents BIGINT |
@@ -374,3 +379,4 @@ payments 1─0..1 cash_movements
 | 2026-10-23 | `user_roles` ganha `id` próprio; `branch_id` vira FK nullable (`NULL` = empresa toda), unicidade garantida pelo agregado `User`. Datas: DATETIME(6) via tipos sobrescritos do DBAL. |
 | 2026-10-23 | M1.2: `discount_limits` removida — limite vira `roles.max_discount_percent`. `role_permissions` PK `(permission, role_id)` + índice em `role_id`. Login por slug + e-mail; PIN após escolher o usuário. |
 | 2026-10-23 | M1.3: tabela `devices` (aparelho pareado); `api_tokens` com prefixo `u_` e expiração deslizante. |
+| 2026-10-26 | M2: cardápio por filial; sem `products.base_price_cents` — todo produto tem ≥1 variação, `product_variant_id` obrigatório em `command_items`/`order_items`; `stations`/`categories` com timestamps; FKs de ID por convenção (ADR-012). |

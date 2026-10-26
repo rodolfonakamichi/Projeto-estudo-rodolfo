@@ -14,8 +14,9 @@
 | `Company` | `Branch[]`, `Capability[]` | Slug único; ao menos 1 filial ativa. |
 | `User` | `UserRole[]` (papel + filial opcional) | E-mail único por empresa; papel/filial da mesma empresa; sem papel duplicado no mesmo escopo. |
 | `Role` | `RolePermission[]` | Código único por empresa; limite de desconto do papel. |
-| `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa OU preço próprio; soma de min/max dos grupos coerente. |
-| `Category` | — | Nome único por filial. |
+| `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa (o preço mora na variação); min/max dos grupos coerente. |
+| `Category` | — | Nome único por filial; arquivada não muda. |
+| `Station` | — | Nome único por filial; só com a capability `kitchen`. |
 | `Location` | — | Código de QR único por empresa. |
 | `Command` | `CommandItem[]`, `Discount[]`, `BillSplit?` | Total = Σ itens − descontos; só fecha se saldo = 0; item não some, é cancelado. |
 | `Order` | `OrderItem[]` | Pertence a 1 comanda aberta; não pode ser enviado vazio. |
@@ -229,3 +230,4 @@ implementa a interface do Domain.
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | Nota §5 reescrita para Doctrine Data Mapper (ADR-012). Agregado `Company` implementado no M1. |
 | 2026-10-23 | `Role` vira agregado próprio (permissões + limite de desconto). `User` guarda `UserRole[]` com filial opcional. |
+| 2026-10-26 | M2: `Product` sempre com ≥1 variação (sem preço próprio); `Station` como agregado; Catálogo referencia outros agregados por ID. |

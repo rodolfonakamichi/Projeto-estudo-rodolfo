@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
-use App\Domain\Shared\DomainException;
+use App\Domain\Shared\NotFound;
 
-final class RoleNotFound extends DomainException
+final class RoleNotFound extends NotFound
 {
     public static function withCode(RoleCode $code): self
     {

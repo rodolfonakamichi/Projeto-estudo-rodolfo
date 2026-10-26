@@ -31,7 +31,7 @@ final class SeedDemoCommandTest extends KernelTestCase
         $company = self::getContainer()->get(CompanyRepository::class)->getBySlug(Slug::fromString(SeedDemoCommand::SLUG));
         self::assertCount(1, $company->branches());
 
-        $checker = new CapabilityChecker(self::getContainer()->get(CompanyRepository::class));
+        $checker = self::getContainer()->get(CapabilityChecker::class);
         self::assertTrue($checker->has($company->id(), Capability::Kitchen));
         self::assertFalse($checker->has($company->id(), Capability::Hotel), 'aceite M1: hotel = false na demo');
 

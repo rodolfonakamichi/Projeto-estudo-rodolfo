@@ -376,10 +376,17 @@ projeto** usando as ferramentas atuais do ecossistema.
   `ClockInterface` injetado (congelável em teste).
 - **Porta → adapter explícito** em `config/services.yaml` (o Domain fica fora
   do container, então o autowiring não liga a interface sozinho).
-- **Referência entre agregados por objeto, só leitura.** `Role`/`User`
-  apontam para `Company` (e `UserRole` para `Branch`) como objeto, para o
-  Doctrine gerar a FK. Nenhum agregado altera outro por essa referência; fora
-  dele só se expõe o ID (`companyId()`).
+- **Referência entre agregados por ID (a partir do M2).** O Catálogo (e os
+  contextos seguintes) guarda `CompanyId`/`BranchId`/`CategoryId`... como campo,
+  não como associação Doctrine — não importa entidades de outro contexto nem
+  carrega agregado alheio por lazy-loading. As FKs continuam no banco: o
+  listener `IdentifierForeignKeys` (`postGenerateSchemaTable`) cria a FK de
+  todo campo cujo tipo é um ID tipado, então `make:migration` e
+  `schema:validate` enxergam. O `CompanyFilter` reconhece o campo `companyId`.
+  *Legado M1:* em Identity, `Role`/`User` apontam para `Company` (e `UserRole`
+  para `Branch`) como objeto, só leitura.
+- **Não encontrado = 404.** `Domain\Shared\NotFound` (subclasse de
+  `DomainException`) — inclusive o que é de outra empresa, escondido pelo filtro.
 - **`id` das entidades sem `readonly`** (proxy lazy-ghost do Doctrine regrava
   o id ao inicializar no PHP 8.3).
 - **Autenticação (M1.3):** token opaco próprio (`u_`/`d_` + 256 bits, só o
@@ -420,3 +427,4 @@ projeto** usando as ferramentas atuais do ecossistema.
 | 2026-10-23 | ADR-012: Symfony 7.4 LTS + Doctrine ORM (XML) + Doctrine Migrations + Messenger. Substitui a ADR-011; revisa a tabela de libs da ADR-002. |
 | 2026-10-23 | ADR-012 detalhada no M1: `doctrine/collections` no Domain, entidades não-`final`, DATETIME(6) global por override dos tipos do DBAL, timestamps por listener, porta→adapter explícito. |
 | 2026-10-26 | ADR-004 revisada (M1.4): isolamento por filtro SQL do Doctrine, ligado na autenticação (rotas públicas e CLI sem filtro); `CompanyContext` também para aparelho; DBAL filtra à mão. |
+| 2026-10-26 | ADR-012 (M2.1): referência entre agregados por ID com FK gerada pelo listener `IdentifierForeignKeys`; `NotFound` → 404. |

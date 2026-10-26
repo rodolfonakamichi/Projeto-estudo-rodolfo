@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Identity;
 
 use App\Domain\Shared\DomainException;
+use App\Domain\Shared\NotFound;
 use App\Domain\Shared\Timestamped;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -91,7 +92,7 @@ class Company implements Timestamped
             }
         }
 
-        throw new DomainException('Filial não encontrada nesta empresa.');
+        throw new NotFound('Filial não encontrada nesta empresa.');
     }
 
     /** @return list<Branch> */
