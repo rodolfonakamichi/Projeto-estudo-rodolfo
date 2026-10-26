@@ -38,6 +38,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Infrastructure/Persistence/Doctrine/Mapping'
                 prefix: 'App\Domain'
                 alias: Domain
+        filters:
+            # company_id = ? em toda consulta do ORM (ADR-004). Desligado por
+            # padrão: o CompanyContextHolder liga ao autenticar o token.
+            company:
+                class: App\Infrastructure\Persistence\Doctrine\Filter\CompanyFilter
+                enabled: false
         controller_resolver:
             auto_mapping: false
 

@@ -138,19 +138,24 @@ collation `utf8mb4_0900_ai_ci` (MySQL) / `utf8mb4_unicode_ci` (MariaDB).
 **Contexto.** Seção 42: uma empresa tem várias filiais; precisa isolar dados.
 
 **Decisão.** *Single database, shared schema*. **Toda** tabela de negócio tem
-`company_id` (e, quando fizer sentido, `branch_id`). Sem ORM não há *global scope*
-automático: um objeto imutável `CompanyContext`, resolvido pelo middleware de
-autenticação, é injetado em **todo** repositório, e **todo** SQL de negócio
-carrega `WHERE company_id = :company_id`. Uma classe base de repositório e um
-`QueryBuilder` fino garantem que ninguém esqueça. Chave de acesso à empresa vem
-do usuário autenticado (ou do QR Code, para o cliente).
+`company_id` (e, quando fizer sentido, `branch_id`). O *global scope* é um
+**filtro SQL do Doctrine** (`CompanyFilter`): toda consulta do ORM (find, findBy,
+DQL, JOIN, carga preguiçosa) ganha `company_id = :company_id`. Um objeto imutável
+`CompanyContext` (usuário **ou** aparelho pareado) é resolvido quando o token é
+validado; o `CompanyContextHolder` guarda o contexto e liga o filtro no mesmo
+passo. Rotas públicas (login por senha) e CLI rodam **sem** filtro e passam o
+`companyId` explicitamente. SQL puro (read models DBAL) não é coberto pelo
+filtro: o `WHERE company_id` é escrito à mão. Chave de acesso à empresa vem do
+usuário autenticado (ou do QR Code, para o cliente).
 
 **Consequências.**
 - ✅ Simples de operar, backup único, migrações únicas.
 - ⚠️ Risco de vazamento entre companies se alguém esquecer o filtro → mitigado por:
   (1) `company_id` obrigatório na assinatura dos métodos de repositório (sem
   default), (2) `company_id` em todos os índices únicos compostos,
-  (3) teste automatizado que garante isolamento (M1).
+  (3) teste automatizado que garante isolamento (M1: `CompanyIsolationTest`),
+  (4) teste que obriga toda entidade nova a ser filtrada ou declarada filha de
+  agregado (`CompanyFilterCoverageTest`).
 - Reavaliar para *database-per-company* só se um cliente grande exigir.
 
 ---
@@ -414,3 +419,4 @@ projeto** usando as ferramentas atuais do ecossistema.
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | ADR-012: Symfony 7.4 LTS + Doctrine ORM (XML) + Doctrine Migrations + Messenger. Substitui a ADR-011; revisa a tabela de libs da ADR-002. |
 | 2026-10-23 | ADR-012 detalhada no M1: `doctrine/collections` no Domain, entidades não-`final`, DATETIME(6) global por override dos tipos do DBAL, timestamps por listener, porta→adapter explícito. |
+| 2026-10-26 | ADR-004 revisada (M1.4): isolamento por filtro SQL do Doctrine, ligado na autenticação (rotas públicas e CLI sem filtro); `CompanyContext` também para aparelho; DBAL filtra à mão. |

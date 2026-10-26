@@ -327,3 +327,4 @@ autoatendimento pleno, API pública, marketplace de integrações.
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | ADR-012: M0 refeito sobre Symfony 7.4 LTS; M1 com Symfony Security (token + Voters), filtro Doctrine para `company_id`; método de trabalho com Doctrine Migrations. |
+| 2026-10-26 | M1.4 entregue: `CompanyFilter` + `CompanyContextHolder` (Infrastructure, `ResetInterface`), porta `CompanyContextProvider` na Application. |

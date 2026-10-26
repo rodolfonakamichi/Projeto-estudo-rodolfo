@@ -11,6 +11,9 @@ use App\Application\Shared\Bus\CommandBus;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
 use App\Domain\Identity\UserId;
+use App\Infrastructure\Persistence\Doctrine\Filter\CompanyFilter;
+use App\Infrastructure\Security\CompanyContextHolder;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
@@ -23,6 +26,7 @@ final class AuthFlowTest extends WebTestCase
     use ClockSensitiveTrait;
 
     private KernelBrowser $client;
+    private CompanyId $companyId;
     private BranchId $branchId;
     private UserId $waiterId;
 
@@ -33,7 +37,7 @@ final class AuthFlowTest extends WebTestCase
         // contador do rate limiter mora no cache (arquivo): zera para os testes não interferirem entre si
         self::getContainer()->get('cache.rate_limiter')->clear();
 
-        $companyId = CompanyId::generate();
+        $this->companyId = $companyId = CompanyId::generate();
         $this->branchId = BranchId::generate();
         $this->waiterId = UserId::generate();
 
@@ -139,12 +143,34 @@ final class AuthFlowTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    /** M1.4: token validado → contexto da empresa + filtro do Doctrine ligados */
+    public function test_requisicao_autenticada_entra_no_contexto_da_empresa(): void
+    {
+        $this->json('GET', '/api/me', token: $this->login('gil@bar.com'));
+        $this->assertCompanyContext(expectBranch: false);
+
+        $paired = $this->json('POST', '/api/devices', ['branchId' => $this->branchId->toString(), 'name' => 'Tablet'], $this->login('gil@bar.com'));
+        $this->json('GET', '/api/device/users', token: $paired['token']);
+        $this->assertCompanyContext(expectBranch: true);
+    }
+
     public function test_payload_invalido_lista_os_campos(): void
     {
         $body = $this->json('POST', '/api/auth/login', ['company' => '', 'email' => 'x', 'password' => '']);
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame(['company', 'email', 'password'], array_keys($body['fields']));
+    }
+
+    /** Lê o container da última requisição (o kernel só reinicia na próxima). */
+    private function assertCompanyContext(bool $expectBranch): void
+    {
+        $context = self::getContainer()->get(CompanyContextHolder::class)->get();
+
+        self::assertTrue($context->companyId->equals($this->companyId));
+        self::assertSame($expectBranch ? $this->branchId->toString() : null, $context->branchId?->toString());
+        self::assertSame($expectBranch, null === $context->userId, 'aparelho não tem usuário');
+        self::assertTrue(self::getContainer()->get(EntityManagerInterface::class)->getFilters()->isEnabled(CompanyFilter::NAME));
     }
 
     private function login(string $email): string

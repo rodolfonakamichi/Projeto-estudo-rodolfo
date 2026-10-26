@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-23 (fim da sessão, após o M1.3). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M1.4 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -18,7 +18,8 @@
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
 - **Milestone atual:** **M1** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
-  M1.3 `7958884`. Próximo: **M1.4 — multiempresa** (nada em andamento).
+  M1.3 `7958884`. **M1.4 — multiempresa** implementado (não commitado).
+  Próximo: **M1.5 — autorização**.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -112,15 +113,27 @@ lista usuários e troca PIN por token); token de usuário **expira 12h após o
 | Migrations `api_tokens`, `devices` + **migration de dados** (`admin.device.manage` p/ empresas existentes) | `migrations/` |
 | Testes: `ApiTokenTest` (expiração), `AuthFlowTest` (HTTP ponta a ponta, MockClock, 429) — 69 verdes | `tests/` |
 
+### M1.4 — multiempresa (não commitado)
+Decisão do usuário: filtro **ligado na autenticação** (token de usuário ou de
+aparelho); rotas públicas e CLI sem filtro, com `companyId` explícito nos repositórios.
+
+| Entrega | Onde |
+|---|---|
+| `CompanyFilter` (SQLFilter): `company_id = ?` em toda entidade com associação `company`; `id = ?` na `Company` | `src/Infrastructure/Persistence/Doctrine/Filter/`, `config/packages/doctrine.yaml` |
+| `CompanyContext::forUser()/forDevice()` (aparelho: sem usuário, com filial) | `src/Domain/Identity/CompanyContext.php` |
+| Porta `CompanyContextProvider` (só leitura) | `src/Application/Shared/Context/` |
+| `CompanyContextHolder` (Infrastructure, `ResetInterface`): guarda contexto + liga/desliga o filtro | `src/Infrastructure/Security/` |
+| `EnterCompanyContextOnLogin` (listener de `LoginSuccessEvent`) | `src/Infrastructure/Security/` |
+| Testes: aceite "A não vê B mesmo forçando id" (find, DQL, JOIN, slug), cobertura do filtro, contexto via HTTP — 77 verdes | `tests/Integration/MultiCompany/`, `AuthFlowTest` |
+| ADR-004 revisada | `docs/dominio/00-decisoes-arquiteturais.md` |
+
 ---
 
 ## Próximos passos — M1 sobre Symfony
 
 1. ~~Agregado Company~~ (M1.1). ~~User + Role~~ (M1.2).
 2. ~~Autenticação~~ (M1.3).
-3. **M1.4 — Multiempresa:** filtro SQL do Doctrine (`CompanyFilter`) ligado com
-   o `CompanyContext`; `CompanyContextHolder` para `Application` com
-   `ResetInterface`. Aceite: usuário da empresa A não vê dado da B.
+3. ~~Multiempresa~~ (M1.4).
 4. **M1.5 — Autorização:** Voter que delega para `User::can()`;
    `CapabilityChecker` (`hotel` = false na demo). Aceite HTTP: WAITER 403 /
    CASHIER 200 em `command.close`.
@@ -165,8 +178,12 @@ lista usuários e troca PIN por token); token de usuário **expira 12h após o
 - **PHPStan** lê o container compilado (`var/cache/dev/...xml`): rodar
   `bin/console cache:warmup` antes se o cache estiver limpo. Cache velho depois
   de `composer require` → `vendor/bin/phpstan clear-result-cache`.
-- **`user_roles.branch_id`** = `CHAR(26) NOT NULL DEFAULT ''` — `''` significa
-  "papel na empresa toda". Sentinela em vez de NULL (PK não aceita NULL). Sem FK.
+- **`user_roles.branch_id`** = `NULL` significa "papel na empresa toda" (tem id
+  próprio, então não precisa de sentinela; FK para `branches`).
+- **Filtro do Doctrine** não pega identity map (`find()` de objeto já carregado
+  não vai ao banco) nem DBAL/SQL puro — read model filtra `company_id` à mão.
+  Entidade nova: ter a associação `company` ou entrar na lista de filhas do
+  `CompanyFilterCoverageTest`.
 - **Método de trabalho:** explicar cada conceito/padrão ao aplicar; usar as
   ferramentas (Maker, `make:migration`) e revisar o gerado; sempre `composer check`
   antes de commitar. Identidade git local = pessoal (`rodolfo.nakamichi11@gmail.com`).

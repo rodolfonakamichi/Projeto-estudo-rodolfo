@@ -58,6 +58,11 @@ Adapters concretos:
   repositórios do Domain (`DoctrineCompanyRepository`). Ligação porta → adapter
   em `config/services.yaml`.
 - `Infrastructure/Persistence/Doctrine/Listener/` — `TimestampListener`.
+- `Infrastructure/Persistence/Doctrine/Filter/` — `CompanyFilter` (filtro SQL
+  `company_id = ?` em toda consulta do ORM, ADR-004).
+- `Infrastructure/Security/` — autenticação por token opaco e o
+  `CompanyContextHolder` (contexto da empresa + liga o filtro), ativado pelo
+  `EnterCompanyContextOnLogin`.
 - `Infrastructure/Health/` — `DbalDatabaseProbe`.
 - Adiante: gateway PIX, outbox.
 

@@ -43,6 +43,9 @@ services:
     App\Application\Identity\Auth\TokenPolicy:
         arguments: ['%app.auth.user_token_idle%']
     App\Application\Identity\Auth\DeviceUsersQuery: '@App\Infrastructure\Persistence\Dbal\DbalDeviceUsersQuery'
+    # Multiempresa (M1.4): a Application só lê o contexto; quem entra nele é a
+    # autenticação. ResetInterface → tag kernel.reset pelo autoconfigure.
+    App\Application\Shared\Context\CompanyContextProvider: '@App\Infrastructure\Security\CompanyContextHolder'
 
     App\Infrastructure\Security\NativePasswordHasher:
         arguments: ['%app.password_hash_cost%']
