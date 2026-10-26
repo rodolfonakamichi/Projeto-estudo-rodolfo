@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 §3. Totais denormalizados (recalculados pelo agregado a cada mudança).
+         open_table_ref: a mesa enquanto ocupada (NULL fora disso) — o UNIQUE garante 1 comanda aberta por mesa -->
+    <entity name="App\Domain\Attendance\Command" table="commands">
+        <unique-constraints>
+            <unique-constraint name="uniq_commands_daily_number" columns="branch_id,business_date,display_number"/>
+            <unique-constraint name="uniq_commands_open_table" columns="branch_id,open_table_ref"/>
+        </unique-constraints>
+        <indexes>
+            <index name="idx_commands_branch_status" columns="branch_id,status"/>
+            <index name="idx_commands_bind" columns="company_id,bind_type,bind_ref"/>
+        </indexes>
+
+        <id name="id" type="command_id"/>
+
+        <field name="companyId" column="company_id" type="company_id"/>
+        <field name="branchId" column="branch_id" type="branch_id"/>
+        <field name="displayNumber" column="display_number" type="integer"/>
+        <field name="businessDate" column="business_date" type="date_immutable"/>
+        <field name="bindType" column="bind_type" length="20" enum-type="App\Domain\Attendance\BindType"/>
+        <field name="bindRef" column="bind_ref" length="60" nullable="true"/>
+        <field name="openTableRef" column="open_table_ref" length="60" nullable="true"/>
+        <field name="status" length="30" enum-type="App\Domain\Attendance\CommandStatus"/>
+        <field name="openedBy" column="opened_by" type="user_id"/>
+        <field name="openedAt" column="opened_at" type="datetime_immutable"/>
+        <field name="closedAt" column="closed_at" type="datetime_immutable" nullable="true"/>
+        <field name="cancelReason" column="cancel_reason" length="255" nullable="true"/>
+        <field name="subtotal" column="subtotal_cents" type="money"/>
+        <field name="discountTotal" column="discount_total_cents" type="money"/>
+        <field name="serviceFee" column="service_fee_cents" type="money"/>
+        <field name="total" column="total_cents" type="money"/>
+        <field name="paidTotal" column="paid_total_cents" type="money"/>
+        <field name="balance" column="balance_cents" type="money"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+        <field name="updatedAt" column="updated_at" type="datetime_immutable"/>
+
+        <!-- sem orphan-removal: item nunca é apagado (cancela). ULID ordena por criação -->
+        <one-to-many field="items" target-entity="App\Domain\Attendance\CommandItem" mapped-by="command">
+            <cascade><cascade-persist/></cascade>
+            <order-by><order-by-field name="id"/></order-by>
+        </one-to-many>
+    </entity>
+</doctrine-mapping>

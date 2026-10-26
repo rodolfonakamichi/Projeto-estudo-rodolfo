@@ -385,6 +385,10 @@ projeto** usando as ferramentas atuais do ecossistema.
   `schema:validate` enxergam. O `CompanyFilter` reconhece o campo `companyId`.
   *Legado M1:* em Identity, `Role`/`User` apontam para `Company` (e `UserRole`
   para `Branch`) como objeto, só leitura.
+- **FK de usuário é RESTRICT** (M3.2): usuário se desativa, não se apaga —
+  apagar levaria junto o histórico (comandas que abriu, itens que cancelou).
+- **Tabela fora do ORM** (só SQL direto, ex.: `counters`): `schema_filter` no
+  `doctrine.yaml` e migration escrita à mão.
 - **Não encontrado = 404.** `Domain\Shared\NotFound` (subclasse de
   `DomainException`) — inclusive o que é de outra empresa, escondido pelo filtro.
 - **`id` das entidades sem `readonly`** (proxy lazy-ghost do Doctrine regrava
@@ -428,3 +432,4 @@ projeto** usando as ferramentas atuais do ecossistema.
 | 2026-10-23 | ADR-012 detalhada no M1: `doctrine/collections` no Domain, entidades não-`final`, DATETIME(6) global por override dos tipos do DBAL, timestamps por listener, porta→adapter explícito. |
 | 2026-10-26 | ADR-004 revisada (M1.4): isolamento por filtro SQL do Doctrine, ligado na autenticação (rotas públicas e CLI sem filtro); `CompanyContext` também para aparelho; DBAL filtra à mão. |
 | 2026-10-26 | ADR-012 (M2.1): referência entre agregados por ID com FK gerada pelo listener `IdentifierForeignKeys`; `NotFound` → 404. |
+| 2026-10-26 | ADR-012 (M3.2): FK de usuário RESTRICT; tabelas fora do ORM via `schema_filter`; UNIQUE violado → 409. |

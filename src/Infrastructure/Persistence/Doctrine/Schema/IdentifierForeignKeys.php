@@ -33,9 +33,12 @@ final class IdentifierForeignKeys
         // catálogo arquiva em vez de apagar: apagar em uso deve falhar
         'category_id' => ['categories', null],
         'station_id' => ['stations', null],
-        // produto também não se apaga (desativa); comanda/pedido vão apontar para ele
+        // produto/variação/modificador não se apagam (desativam): a comanda aponta para eles
         'product_id' => ['products', null],
-        'user_id' => ['users', 'CASCADE'],
+        'product_variant_id' => ['product_variants', null],
+        'modifier_id' => ['modifiers', null],
+        // usuário também não se apaga (desativa): apagar levaria junto o histórico (comandas que abriu)
+        'user_id' => ['users', null],
         // local também se desativa em vez de apagar (comanda de mesa aponta para ele)
         'location_id' => ['locations', null],
     ];

@@ -44,12 +44,14 @@ services:
     App\Domain\Catalog\ProductRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineProductRepository'
     App\Domain\Catalog\OperatorFavoritesRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineOperatorFavoritesRepository'
     App\Domain\Attendance\LocationRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineLocationRepository'
+    App\Domain\Attendance\CommandRepository: '@App\Infrastructure\Persistence\Doctrine\Repository\DoctrineCommandRepository'
 
     App\Application\Identity\Auth\TokenPolicy:
         arguments: ['%app.auth.user_token_idle%']
     App\Application\Identity\Auth\DeviceUsersQuery: '@App\Infrastructure\Persistence\Dbal\DbalDeviceUsersQuery'
     App\Application\Catalog\CatalogQuery: '@App\Infrastructure\Persistence\Dbal\DbalCatalogQuery'
     App\Application\Attendance\AttendanceQuery: '@App\Infrastructure\Persistence\Dbal\DbalAttendanceQuery'
+    App\Application\Attendance\Command\DisplayNumberSequence: '@App\Infrastructure\Persistence\Dbal\DbalDisplayNumberSequence'
     # Multiempresa (M1.4): a Application só lê o contexto; quem entra nele é a
     # autenticação. ResetInterface → tag kernel.reset pelo autoconfigure.
     App\Application\Shared\Context\CompanyContextProvider: '@App\Infrastructure\Security\CompanyContextHolder'

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\MultiCompany;
 
+use App\Domain\Attendance\CommandItemModifier;
 use App\Domain\Catalog\FavoriteProduct;
 use App\Domain\Catalog\Modifier;
 use App\Domain\Catalog\ModifierGroup;
@@ -29,6 +30,7 @@ final class CompanyFilterCoverageTest extends KernelTestCase
         ModifierGroup::class,  // raiz: Product
         Modifier::class,       // raiz: Product (via ModifierGroup)
         FavoriteProduct::class, // raiz: OperatorFavorites
+        CommandItemModifier::class, // raiz: Command (via CommandItem)
     ];
 
     public function test_toda_entidade_e_filtrada_ou_filha_declarada(): void

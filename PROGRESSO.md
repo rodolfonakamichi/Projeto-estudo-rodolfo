@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M3.1 implementado na branch `feat/m3.1-mesas`, aguardando commit/PR). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M3.2 implementado na branch `feat/m3.2-comanda`, aguardando commit/PR). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch main && git pull` e
 > `docker compose up -d`.
@@ -20,8 +20,9 @@
 - Histórico antigo: `m1-identidade` = `f68f4f0` (migrations Phinx descartadas).
 - **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 `c8a19e3`.
   M2.3 `1db325a` (PR #5). M2.4 `208b2db` (PR #6). M2.5 `1a6269c` (PR #7) — **M2 concluído**.
-- **M3 — Comanda + Pedido** em andamento: M3.1 (mesas) implementado em
-  `feat/m3.1-mesas` (não commitado). Próximo: **M3.2 — comanda**.
+- **M3 — Comanda + Pedido** em andamento: M3.1 `fa0f947` (PR #8). M3.2
+  (comanda) implementado em `feat/m3.2-comanda` (não commitado). Próximo:
+  **M3.3 — outbox + audit_log**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -223,7 +224,7 @@ no formato final (`recent`/`topSelling` vazios até o M3); o fix abaixo vai junt
 | Migration operator_favorites, operator_favorite_items | `migrations/Version20261026205421.php` |
 | Testes: unit do agregado, API (reordenar, lista por pessoa, inativo some, 403 cozinha, 404 outra empresa) — 136 verdes | `tests/` |
 
-### M3.1 — mesas / locais (branch `feat/m3.1-mesas`, não commitado)
+### M3.1 — mesas / locais (commit `fa0f947`, PR #8)
 Decisões do usuário para o M3 (2026-10-26): **mesas cadastradas** (comanda de
 mesa aponta para `Location`); **quantidade inteira** no MVP; desconto **na
 comanda e no item**. Contexto novo `App\Domain\Attendance` ("Atendimento"; a
@@ -240,15 +241,26 @@ classe da comanda será `Command`, como no doc 01 — alias onde colidir com o
 | Migration `locations` + dados da permissão | `migrations/Version20261026210436.php` |
 | Testes: unit de `Location`, API (capability por tipo, rótulo único, 403, 404) — 143 verdes | `tests/` |
 
+### M3.2 — comanda (branch `feat/m3.2-comanda`, não commitado)
+| Entrega | Onde |
+|---|---|
+| `Product::select()` → `ProductSelection`/`SelectedModifier`: valida variação/modificadores/min-max e devolve preços de agora (linguagem publicada do Catálogo) | `src/Domain/Catalog/` |
+| Agregado `Command` + `CommandItem` + `CommandItemModifier`; `BindTarget`/`BindType`, `CommandStatus`, `Quantity`, `BusinessDay` (vira às 05:00 no fuso da filial); eventos do doc 05 em `Event/` | `src/Domain/Attendance/` |
+| `RecordsEvents` (agregado registra eventos; outbox grava no M3.3); `Money::times()` | `src/Domain/Shared/` |
+| Casos de uso `OpenCommand`, `AddItemToCommand`, `ChangeItemQuantity`, `CancelCommandItem`, `CancelCommand`; porta `DisplayNumberSequence` | `src/Application/Attendance/Command/` |
+| `DbalDisplayNumberSequence` (`LAST_INSERT_ID` atômico); `counters` fora do ORM (`schema_filter`) | `.../Dbal/`, `doctrine.yaml` |
+| Read model `activeCommands()` / `command()` + views | `AttendanceQuery`, `DbalAttendanceQuery` |
+| API: `GET/POST /api/branches/{id}/commands`, `GET /api/commands/{id}`, `POST .../items`, `PATCH .../items/{id}`, `POST .../items/{id}/cancel`, `POST .../cancel` | `CommandController` |
+| UNIQUE violado → 409; FK de usuário RESTRICT (inclusive favoritos) | `ApiExceptionListener`, `IdentifierForeignKeys` |
+| Migration commands, command_items, command_item_modifiers, counters | `migrations/Version20261026211529.php` |
+| Testes: domínio sem banco (8000, totais, cancelar, `close()`), API (aceites do doc 07, permissões, isolamento), concorrência (UNIQUE da mesa, contador) — 160 verdes | `tests/` |
+
 ---
 
 ## Próximos passos — M3 (Comanda + Pedido)
 
 1. ~~M3.1 — mesas~~.
-2. **M3.2 — comanda**: abrir (vínculo MESA → `Location`, uma comanda aberta por
-   mesa, `display_number` via `counters`, data operacional), lançar item (preço e
-   modificadores validados pelo `Product` e **copiados**), mudar quantidade,
-   cancelar item (não some), totais, `close()` exige saldo zero; API.
+2. ~~M3.2 — comanda~~.
 3. **M3.3 — outbox + audit_log** (`domain_events`, `audit_logs`).
 4. **M3.4 — descontos** (comanda e item; faixa do papel; pendente → gerente autoriza).
 5. **M3.5 — pedido** (`Order`) + `SendPendingItemsToKitchen`.
@@ -332,6 +344,10 @@ classe da comanda será `Command`, como no doc 01 — alias onde colidir com o
   (apagar `products` antes da empresa: FK para categoria/estação é RESTRICT).
 - **FULLTEXT ignora palavras < 3 letras** (`innodb_ft_min_token_size`) e não acha
   pedaço do meio da palavra (`hop` ≠ Chopp). Se precisar: parser `ngram`.
+- **Uma comanda ativa por mesa:** coluna `open_table_ref` mantida pelo agregado
+  (NULL quando libera) + UNIQUE — mais simples que coluna gerada no Doctrine.
+- **Tabela só de SQL** (`counters`): `schema_filter` no `doctrine.yaml`, senão o
+  `make:migration` tenta apagá-la.
 - **Teste HTTP + container:** depois de uma requisição, o container do teste
   guarda o contexto/filtro da empresa logada até o próximo request. Preparar
   dados de OUTRA empresa antes da 1ª requisição (no `setUp`).
