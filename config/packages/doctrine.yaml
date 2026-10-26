@@ -6,7 +6,7 @@ doctrine:
         use_savepoints: true
         # Tabelas fora do ORM (só SQL direto): o Doctrine não tenta criá-las nem
         # apagá-las nas migrations geradas. Migration delas é escrita à mão.
-        schema_filter: ~^(?!counters$)~
+        schema_filter: ~^(?!(counters|audit_logs)$)~
         # Tipos próprios: IDs tipados ⇄ CHAR(26), VOs (Slug, Email...), DATETIME(6)
         types:
             company_id: App\Infrastructure\Persistence\Doctrine\Type\CompanyIdType
@@ -52,6 +52,13 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Infrastructure/Persistence/Doctrine/Mapping'
                 prefix: 'App\Domain'
                 alias: Domain
+            # Outbox (doc 05): entidade de infraestrutura, não de domínio
+            Outbox:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Infrastructure/Persistence/Outbox/Mapping'
+                prefix: 'App\Infrastructure\Persistence\Outbox'
+                alias: Outbox
         filters:
             # company_id = ? em toda consulta do ORM (ADR-004). Desligado por
             # padrão: o CompanyContextHolder liga ao autenticar o token.

@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M3.2 implementado na branch `feat/m3.2-comanda`, aguardando commit/PR). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M3.3 implementado na branch `feat/m3.3-outbox-auditoria`, aguardando commit/PR). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch main && git pull` e
 > `docker compose up -d`.
@@ -21,8 +21,8 @@
 - **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 `c8a19e3`.
   M2.3 `1db325a` (PR #5). M2.4 `208b2db` (PR #6). M2.5 `1a6269c` (PR #7) — **M2 concluído**.
 - **M3 — Comanda + Pedido** em andamento: M3.1 `fa0f947` (PR #8). M3.2
-  (comanda) implementado em `feat/m3.2-comanda` (não commitado). Próximo:
-  **M3.3 — outbox + audit_log**.
+  `057f001` (PR #9). M3.3 (outbox + auditoria) implementado em
+  `feat/m3.3-outbox-auditoria` (não commitado). Próximo: **M3.4 — descontos**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -39,7 +39,8 @@ docker compose exec php bin/console app:health     # PHP 8.3 / MySQL 8.4 / OK
 docker compose exec php composer check             # cs, phpstan, deptrac, container, phpunit
 curl localhost:8080/health                          # {"status":"ok"}
 docker compose exec php bin/console app:seed-demo   # empresa demo (senha demo1234, PIN 1234)
-docker compose exec php bin/console app:seed-demo-catalog --extra=1000   # cardápio + 1k produtos
+docker compose exec php bin/console app:seed-demo-catalog --extra=1000   # cardápio, mesas + 1k produtos
+docker compose exec php bin/console app:outbox:publish  # despacha eventos (auditoria); em produção: cron a cada minuto
 ```
 
 Banco: `comandas` (dev) e `comandas_test` (testes). Volume novo cria os dois
@@ -241,7 +242,7 @@ classe da comanda será `Command`, como no doc 01 — alias onde colidir com o
 | Migration `locations` + dados da permissão | `migrations/Version20261026210436.php` |
 | Testes: unit de `Location`, API (capability por tipo, rótulo único, 403, 404) — 143 verdes | `tests/` |
 
-### M3.2 — comanda (branch `feat/m3.2-comanda`, não commitado)
+### M3.2 — comanda (commit `057f001`, PR #9)
 | Entrega | Onde |
 |---|---|
 | `Product::select()` → `ProductSelection`/`SelectedModifier`: valida variação/modificadores/min-max e devolve preços de agora (linguagem publicada do Catálogo) | `src/Domain/Catalog/` |
@@ -255,13 +256,26 @@ classe da comanda será `Command`, como no doc 01 — alias onde colidir com o
 | Migration commands, command_items, command_item_modifiers, counters | `migrations/Version20261026211529.php` |
 | Testes: domínio sem banco (8000, totais, cancelar, `close()`), API (aceites do doc 07, permissões, isolamento), concorrência (UNIQUE da mesa, contador) — 160 verdes | `tests/` |
 
+### M3.3 — outbox + auditoria (branch `feat/m3.3-outbox-auditoria`, não commitado)
+Decisão do usuário: auditoria como **consumidor do outbox** (doc 05), não síncrona.
+
+| Entrega | Onde |
+|---|---|
+| Interface `AggregateRoot` (Command implementa); eventos da comanda com `displayNumber`, `itemName`, `actorId` | `src/Domain/Shared/`, `src/Domain/Attendance/` |
+| `StoredEvent` (entidade de infraestrutura, mapeamento próprio) + `OutboxListener` (onFlush → mesmo COMMIT) | `src/Infrastructure/Persistence/Outbox/`, `.../Doctrine/Listener/` |
+| `RecordedEvent` (evento como dados), porta `OutboxRelay` → `DbalOutboxRelay` (1 evento por transação, `SKIP LOCKED`, para na falha) | `src/Application/Shared/Event/`, `.../Outbox/` |
+| `app:outbox:publish [--limit]` | `src/Presentation/Console/OutboxPublishCommand.php` |
+| Consumidor `AuditTrail` (ações sensíveis → resumo legível, nome do ator copiado) + porta `AuditLog` → `DbalAuditLog` (`INSERT IGNORE`) | `src/Application/Audit/`, `.../Dbal/` |
+| Migration `domain_events` (ORM) + `audit_logs` (à mão, fora do ORM) | `migrations/Version20261026213149.php` |
+| Testes: evento no mesmo commit, recusado não grava, relay em ordem + auditoria do cancelamento, idempotência — 164 verdes | `tests/Integration/Attendance/OutboxAndAuditTest.php` |
+
 ---
 
 ## Próximos passos — M3 (Comanda + Pedido)
 
 1. ~~M3.1 — mesas~~.
 2. ~~M3.2 — comanda~~.
-3. **M3.3 — outbox + audit_log** (`domain_events`, `audit_logs`).
+3. ~~M3.3 — outbox + audit_log~~.
 4. **M3.4 — descontos** (comanda e item; faixa do papel; pendente → gerente autoriza).
 5. **M3.5 — pedido** (`Order`) + `SendPendingItemsToKitchen`.
 6. **M3.6 — `Idempotency-Key`** nos endpoints de escrita.
@@ -344,6 +358,9 @@ classe da comanda será `Command`, como no doc 01 — alias onde colidir com o
   (apagar `products` antes da empresa: FK para categoria/estação é RESTRICT).
 - **FULLTEXT ignora palavras < 3 letras** (`innodb_ft_min_token_size`) e não acha
   pedaço do meio da palavra (`hop` ≠ Chopp). Se precisar: parser `ngram`.
+- **Outbox no Doctrine:** o `onFlush` roda ANTES do `beginTransaction` — INSERT
+  direto ali ficaria fora da transação. Por isso o evento vira entidade
+  (`StoredEvent`) com `persist` + `computeChangeSet` no próprio `onFlush`.
 - **Uma comanda ativa por mesa:** coluna `open_table_ref` mantida pelo agregado
   (NULL quando libera) + UNIQUE — mais simples que coluna gerada no Doctrine.
 - **Tabela só de SQL** (`counters`): `schema_filter` no `doctrine.yaml`, senão o

@@ -26,9 +26,10 @@ final readonly class ChangeItemQuantityHandler implements CommandHandler
 
     public function __invoke(ChangeItemQuantity $command): void
     {
+        $actorId = UserId::fromString($command->actorId);
         $tab = $this->commands->get(CommandId::fromString($command->commandId));
-        $this->authorizer->authorize(UserId::fromString($command->actorId), $tab->branchId(), Permission::CommandItemAdd);
+        $this->authorizer->authorize($actorId, $tab->branchId(), Permission::CommandItemAdd);
 
-        $tab->changeItemQuantity(CommandItemId::fromString($command->itemId), Quantity::of($command->quantity), $this->clock->now());
+        $tab->changeItemQuantity(CommandItemId::fromString($command->itemId), Quantity::of($command->quantity), $actorId, $this->clock->now());
     }
 }

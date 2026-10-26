@@ -308,10 +308,13 @@ migration final.
 | payload | JSON | dados do evento |
 | occurred_at | DATETIME(6) | |
 | published_at | DATETIME(6) NULL | nulo = ainda não despachado |
-| device_id | VARCHAR(40) NULL | origem (offline futuro) |
+| device_id | VARCHAR(40) NULL | origem (offline futuro) — **ainda não criada** |
+| branch_id | CHAR(26) NULL | (M3.3) filial do agregado — a auditoria filtra por filial |
 | — | | `INDEX (published_at)`, `INDEX (aggregate_type, aggregate_id, occurred_at)` |
 
 ### `audit_logs`
+> M3.3: fora do ORM (`schema_filter`), só INSERT por SQL; `id` = id do evento de origem (idempotente).
+
 | id | CHAR(26) PK | company_id | branch_id | actor_id CHAR(26) NULL | actor_name VARCHAR(150) | action VARCHAR(60) (`command.discount.authorize`) | target_type VARCHAR(40) | target_id CHAR(26) | summary VARCHAR(255) | metadata JSON NULL | created_at | `INDEX (target_type, target_id)`, `INDEX (company_id, created_at)` |
 
 ### `idempotency_keys` (opcional; alternativa a coluna por tabela)
@@ -408,3 +411,4 @@ payments 1─0..1 cash_movements
 | 2026-10-26 | M2.5: `operator_favorites` + `operator_favorite_items` (favoritos por operador e filial); recentes/mais vendidos calculados (M3). |
 | 2026-10-26 | M3.1: `locations` (sem `qr_code` por ora), rótulo único por filial. M3: `command_items.quantity` passa a ser INT (quantidade inteira no MVP). |
 | 2026-10-26 | M3.2: `commands` (uma comanda ativa por mesa via `open_table_ref` + UNIQUE, em vez de coluna gerada), `command_items` (+ `variant_name`, `station_id`, `cancelled_at`, timestamps; `quantity` INT), `command_item_modifiers` com PK composta, `counters` fora do ORM. |
+| 2026-10-26 | M3.3: `domain_events` (+ `branch_id`; `device_id` adiado) e `audit_logs` (fora do ORM, id = id do evento). |

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 §7 / doc 05: outbox. branch_id além do doc (auditoria por filial); device_id fica para o offline -->
+    <entity name="App\Infrastructure\Persistence\Outbox\StoredEvent" table="domain_events">
+        <indexes>
+            <index name="idx_domain_events_pending" columns="published_at"/>
+            <index name="idx_domain_events_aggregate" columns="aggregate_type,aggregate_id,occurred_at"/>
+        </indexes>
+
+        <id name="id" type="string" length="26">
+            <options><option name="fixed">true</option></options>
+        </id>
+
+        <field name="companyId" column="company_id" type="company_id"/>
+        <field name="branchId" column="branch_id" type="branch_id" nullable="true"/>
+        <field name="aggregateType" column="aggregate_type" length="40"/>
+        <field name="aggregateId" column="aggregate_id" length="26">
+            <options><option name="fixed">true</option></options>
+        </field>
+        <field name="name" length="60"/>
+        <field name="payload" type="json"/>
+        <field name="occurredAt" column="occurred_at" type="datetime_immutable"/>
+        <field name="publishedAt" column="published_at" type="datetime_immutable" nullable="true"/>
+    </entity>
+</doctrine-mapping>

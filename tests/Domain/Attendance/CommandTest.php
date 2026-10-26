@@ -43,22 +43,22 @@ final class CommandTest extends TestCase
     public function test_linha_e_totais(): void
     {
         $command = $this->openCommand();
-        $item = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(2), 'sem cebola', $this->now);
+        $item = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(2), 'sem cebola', UserId::generate(), $this->now);
 
         self::assertSame(8000, $item->lineTotal()->cents());
         self::assertSame(500, $item->modifiersTotal()->cents());
         self::assertSame(8000, $command->total()->cents());
         self::assertSame(8000, $command->balance()->cents());
 
-        $command->changeItemQuantity($item->id(), Quantity::of(3), $this->now);
+        $command->changeItemQuantity($item->id(), Quantity::of(3), UserId::generate(), $this->now);
         self::assertSame(12000, $command->total()->cents(), 'total recalculado a cada mudança');
     }
 
     public function test_cancelar_item_nao_apaga_e_sai_do_total(): void
     {
         $command = $this->openCommand();
-        $burger = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, $this->now);
-        $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, $this->now);
+        $burger = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, UserId::generate(), $this->now);
+        $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, UserId::generate(), $this->now);
 
         $command->cancelItem($burger->id(), UserId::generate(), 'cliente desistiu', $this->now);
 
@@ -74,7 +74,7 @@ final class CommandTest extends TestCase
     public function test_cancelar_item_exige_motivo(): void
     {
         $command = $this->openCommand();
-        $item = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, $this->now);
+        $item = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, UserId::generate(), $this->now);
 
         $this->expectException(DomainException::class);
         $command->cancelItem($item->id(), UserId::generate(), '  ', $this->now);
@@ -84,7 +84,7 @@ final class CommandTest extends TestCase
     public function test_nao_fecha_com_saldo(): void
     {
         $command = $this->openCommand();
-        $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, $this->now);
+        $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, UserId::generate(), $this->now);
 
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('saldo');
@@ -99,13 +99,13 @@ final class CommandTest extends TestCase
         self::assertSame(CommandStatus::Cancelled, $command->status());
 
         $this->expectException(DomainException::class);
-        $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, $this->now);
+        $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, UserId::generate(), $this->now);
     }
 
     public function test_registra_os_eventos_do_doc_05(): void
     {
         $command = $this->openCommand();
-        $item = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, $this->now);
+        $item = $command->addItem(CommandItemId::generate(), $this->burgerWithBacon(), Quantity::of(1), null, UserId::generate(), $this->now);
         $command->cancelItem($item->id(), UserId::generate(), 'erro de lançamento', $this->now);
 
         $events = $command->releaseEvents();

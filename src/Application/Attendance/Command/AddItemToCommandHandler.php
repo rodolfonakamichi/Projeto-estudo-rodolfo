@@ -50,6 +50,6 @@ final readonly class AddItemToCommandHandler implements CommandHandler
             array_map(static fn (string $id): ModifierId => ModifierId::fromString($id), $command->modifierIds),
         );
 
-        $tab->addItem(CommandItemId::fromString($command->itemId), $selection, Quantity::of($command->quantity), $command->notes, $this->clock->now());
+        $tab->addItem(CommandItemId::fromString($command->itemId), $selection, Quantity::of($command->quantity), $command->notes, UserId::fromString($command->actorId), $this->clock->now());
     }
 }

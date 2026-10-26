@@ -34,6 +34,21 @@ inverso). Solução:
   despacha no `event.bus`; no MVP roda por cron a cada minuto, depois vira um
   worker residente (`messenger:consume`).
 
+**Como ficou no código (M3.3):**
+- O agregado registra (`RecordsEvents` + interface `AggregateRoot`); ninguém
+  "lembra" de gravar evento no caso de uso.
+- `OutboxListener` (Doctrine `onFlush`) varre o identity map, libera os eventos
+  das raízes e os agenda como entidade `StoredEvent` → entram no **mesmo
+  flush/COMMIT** da mudança. (INSERT direto no `onFlush` ficaria FORA da
+  transação: o `onFlush` roda antes do `beginTransaction`.)
+- `bin/console app:outbox:publish` (`DbalOutboxRelay`): **um evento por
+  transação** — `SELECT ... FOR UPDATE SKIP LOCKED`, despacha um
+  `RecordedEvent` (o evento como dados: `name` + `payload`) no `event.bus`,
+  marca `published_at`. Falhou → desfaz aquele evento e **para** (preserva a
+  ordem); a próxima rodada tenta de novo.
+- Consumidor `AuditTrail`: grava `audit_logs` das ações sensíveis; id do log =
+  id do evento + `INSERT IGNORE` → reprocessar não duplica.
+
 > **Nota de estudo.** Não é *event sourcing* completo — o estado atual continua
 > nas tabelas normais (`commands`, `orders`...). O outbox é só a trilha de
 > fatos. Event sourcing puro (reconstruir estado a partir dos eventos) é uma
@@ -225,3 +240,4 @@ nome de evento); a entrega ao cliente é via SSE (ADR-010).
 | 2026-08-29 | Despacho do outbox sem framework (ADR-011): `bin/console outbox:publish` + cron, dispatcher próprio, entrega via SSE. |
 | 2026-08-30 | Renomeado `Tenant` -> `Company` (tabelas `companies`, `company_capabilities`; coluna `company_id`; `CompanyContext`). O termo "multi-tenant" vira "multiempresa". |
 | 2026-10-23 | Despacho do outbox via `event.bus` do Symfony Messenger (ADR-012). |
+| 2026-10-26 | M3.3: outbox implementado (`OutboxListener` + `StoredEvent`, relay `app:outbox:publish` com `SKIP LOCKED`, envelope `RecordedEvent`); auditoria como consumidor (`AuditTrail`). Eventos da comanda com `displayNumber`, `itemName` e `actorId` no payload (autocontido). |

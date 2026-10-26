@@ -11,9 +11,12 @@ final readonly class CommandItemChanged implements DomainEvent
 {
     public function __construct(
         public string $commandId,
+        public int $displayNumber,
         public string $itemId,
+        public string $itemName,
         public int $oldQuantity,
         public int $newQuantity,
+        public string $actorId,
         private \DateTimeImmutable $occurredAt,
     ) {
     }
