@@ -29,36 +29,36 @@ final class ApiExceptionListener
             return;
         }
 
-        $e = $event->getThrowable();
+        $exception = $event->getThrowable();
 
         [$status, $body] = match (true) {
-            $e instanceof InvalidCredentials => [401, ['error' => $e->getMessage()]],
-            $e instanceof AccessDenied => [403, ['error' => $e->getMessage()]],
-            $e instanceof DomainException, $e instanceof \InvalidArgumentException => [422, ['error' => $e->getMessage()]],
-            $e instanceof HttpExceptionInterface && $e->getPrevious() instanceof ValidationFailedException => [422, [
+            $exception instanceof InvalidCredentials => [401, ['error' => $exception->getMessage()]],
+            $exception instanceof AccessDenied => [403, ['error' => $exception->getMessage()]],
+            $exception instanceof DomainException, $exception instanceof \InvalidArgumentException => [422, ['error' => $exception->getMessage()]],
+            $exception instanceof HttpExceptionInterface && $exception->getPrevious() instanceof ValidationFailedException => [422, [
                 'error' => 'Dados inválidos.',
-                'fields' => self::violations($e->getPrevious()),
+                'fields' => self::violations($exception->getPrevious()),
             ]],
-            $e instanceof HttpExceptionInterface => [$e->getStatusCode(), ['error' => match ($e->getStatusCode()) {
+            $exception instanceof HttpExceptionInterface => [$exception->getStatusCode(), ['error' => match ($exception->getStatusCode()) {
                 401 => 'Autenticação necessária.',
                 403 => 'Acesso negado.',
-                default => $e->getMessage(),
+                default => $exception->getMessage(),
             }]],
             default => [null, null],
         };
 
         if (null !== $status) {
-            $headers = $e instanceof HttpExceptionInterface ? $e->getHeaders() : [];
+            $headers = $exception instanceof HttpExceptionInterface ? $exception->getHeaders() : [];
             $event->setResponse(new JsonResponse($body, $status, $headers));
         }
     }
 
     /** @return array<string, string> */
-    private static function violations(ValidationFailedException $e): array
+    private static function violations(ValidationFailedException $exception): array
     {
         $fields = [];
-        foreach ($e->getViolations() as $v) {
-            $fields[$v->getPropertyPath()] = (string) $v->getMessage();
+        foreach ($exception->getViolations() as $violation) {
+            $fields[$violation->getPropertyPath()] = (string) $violation->getMessage();
         }
 
         return $fields;

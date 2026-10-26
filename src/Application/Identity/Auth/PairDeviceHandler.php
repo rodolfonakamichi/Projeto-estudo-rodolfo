@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Identity\Auth;
 
-use App\Application\Shared\AccessDenied;
+use App\Application\Identity\Authorization\PermissionChecker;
 use App\Application\Shared\Bus\CommandHandler;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\Device;
@@ -22,18 +22,19 @@ final readonly class PairDeviceHandler implements CommandHandler
         private UserRepository $users,
         private DeviceRepository $devices,
         private ClockInterface $clock,
+        private PermissionChecker $permissions,
     ) {
     }
 
     public function __invoke(PairDevice $command): void
     {
-        $user = $this->users->get(UserId::fromString($command->actingUserId));
+        $actorId = UserId::fromString($command->actingUserId);
         $branchId = BranchId::fromString($command->branchId);
 
         // Autorização no caso de uso (doc 06 §6), não no controller
-        if (!$user->can(Permission::AdminDeviceManage, $branchId)) {
-            throw AccessDenied::missing(Permission::AdminDeviceManage->value);
-        }
+        $this->permissions->assert($actorId, Permission::AdminDeviceManage, $branchId);
+
+        $user = $this->users->get($actorId);
 
         $this->devices->save(Device::pair(
             DeviceId::fromString($command->deviceId),

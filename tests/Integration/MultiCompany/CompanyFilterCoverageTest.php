@@ -25,12 +25,12 @@ final class CompanyFilterCoverageTest extends KernelTestCase
 
     public function test_toda_entidade_e_filtrada_ou_filha_declarada(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $filter = new CompanyFilter($em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $filter = new CompanyFilter($entityManager);
         $filter->setParameter(CompanyFilter::PARAMETER, '01HZZZZZZZZZZZZZZZZZZZZZZZ');
 
         $unfiltered = [];
-        foreach ($em->getMetadataFactory()->getAllMetadata() as $metadata) {
+        foreach ($entityManager->getMetadataFactory()->getAllMetadata() as $metadata) {
             $constraint = $filter->addFilterConstraint($metadata, 't0');
 
             if ('' === $constraint) {

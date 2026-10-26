@@ -40,7 +40,7 @@ final class CompanyIsolationTest extends KernelTestCase
         [$this->companyB, $this->userB] = $this->registerCompanyWithUser('Cantina da Lu', 'cantina-da-lu');
 
         // esvazia o identity map: sem isso o find() devolve o objeto da memória sem ir ao banco
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $this->holder()->enter(CompanyContext::forUser($this->companyA, $this->userA));
     }
 
@@ -66,17 +66,17 @@ final class CompanyIsolationTest extends KernelTestCase
 
     public function test_dql_sem_where_so_traz_a_empresa_do_contexto(): void
     {
-        $users = $this->em()->createQuery('SELECT u FROM '.User::class.' u')->getResult();
-        $roleCount = $this->em()->createQuery('SELECT COUNT(r.id) FROM '.Role::class.' r')->getSingleScalarResult();
+        $users = $this->entityManager()->createQuery('SELECT u FROM '.User::class.' u')->getResult();
+        $roleCount = $this->entityManager()->createQuery('SELECT COUNT(r.id) FROM '.Role::class.' r')->getSingleScalarResult();
 
-        self::assertSame([$this->userA->toString()], array_map(static fn (User $u): string => $u->id()->toString(), $users));
+        self::assertSame([$this->userA->toString()], array_map(static fn (User $user): string => $user->id()->toString(), $users));
         self::assertSame(9, (int) $roleCount, 'só os 9 papéis padrão da empresa A');
     }
 
     public function test_join_tambem_e_filtrado(): void
     {
         // forçando o id de B no WHERE: o filtro entra junto (AND company_id = A)
-        $found = $this->em()->createQuery(
+        $found = $this->entityManager()->createQuery(
             'SELECT u, ur, r FROM '.User::class.' u JOIN u.roles ur JOIN ur.role r WHERE u.id = :id',
         )->setParameter('id', $this->userB, 'user_id')->getResult();
 
@@ -115,7 +115,7 @@ final class CompanyIsolationTest extends KernelTestCase
         return self::getContainer()->get(CompanyContextHolder::class);
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
         return self::getContainer()->get(EntityManagerInterface::class);
     }

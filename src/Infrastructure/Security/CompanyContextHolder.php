@@ -23,7 +23,7 @@ final class CompanyContextHolder implements CompanyContextProvider, ResetInterfa
 {
     private ?CompanyContext $context = null;
 
-    public function __construct(private readonly EntityManagerInterface $em)
+    public function __construct(private readonly EntityManagerInterface $entityManager)
     {
     }
 
@@ -34,7 +34,7 @@ final class CompanyContextHolder implements CompanyContextProvider, ResetInterfa
         }
 
         $this->context = $context;
-        $this->em->getFilters()
+        $this->entityManager->getFilters()
             ->enable(CompanyFilter::NAME)
             ->setParameter(CompanyFilter::PARAMETER, $context->companyId->toString());
     }
@@ -54,7 +54,7 @@ final class CompanyContextHolder implements CompanyContextProvider, ResetInterfa
     {
         $this->context = null;
 
-        $filters = $this->em->getFilters();
+        $filters = $this->entityManager->getFilters();
         if ($filters->isEnabled(CompanyFilter::NAME)) {
             $filters->disable(CompanyFilter::NAME);
         }

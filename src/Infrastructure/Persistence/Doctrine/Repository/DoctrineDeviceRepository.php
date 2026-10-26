@@ -13,22 +13,22 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class DoctrineDeviceRepository implements DeviceRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function save(Device $device): void
     {
-        $this->em->persist($device);
+        $this->entityManager->persist($device);
     }
 
     public function get(DeviceId $id): Device
     {
-        return $this->em->find(Device::class, $id) ?? throw DeviceNotFound::withId($id);
+        return $this->entityManager->find(Device::class, $id) ?? throw DeviceNotFound::withId($id);
     }
 
     public function findByToken(OpaqueToken $token): ?Device
     {
-        return $this->em->getRepository(Device::class)->findOneBy(['tokenHash' => $token->hash()]);
+        return $this->entityManager->getRepository(Device::class)->findOneBy(['tokenHash' => $token->hash()]);
     }
 }

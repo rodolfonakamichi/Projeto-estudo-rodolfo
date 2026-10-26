@@ -18,8 +18,8 @@ final readonly class DbalDatabaseProbe implements DatabaseProbe
     {
         try {
             return (string) $this->connection->fetchOne('SELECT VERSION()');
-        } catch (DbalException $e) {
-            throw new \RuntimeException('Banco inacessível: '.$e->getMessage(), previous: $e);
+        } catch (DbalException $exception) {
+            throw new \RuntimeException('Banco inacessível: '.$exception->getMessage(), previous: $exception);
         }
     }
 }

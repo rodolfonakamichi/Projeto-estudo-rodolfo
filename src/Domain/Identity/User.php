@@ -95,6 +95,20 @@ class User implements Timestamped
     }
 
     /**
+     * Permissões efetivas nesta filial (mesma regra do can()), na ordem do enum.
+     * Serve à UX contextual (doc 06 §5): a PWA esconde o que o usuário não pode.
+     *
+     * @return list<Permission>
+     */
+    public function permissionsIn(?BranchId $branchId = null): array
+    {
+        return array_values(array_filter(
+            Permission::cases(),
+            fn (Permission $permission): bool => $this->can($permission, $branchId),
+        ));
+    }
+
+    /**
      * Maior desconto que o usuário aplica sozinho nesta filial (doc 06 §4).
      * `null` = sem limite. Sem papel com `command.discount.apply` = 0%.
      */

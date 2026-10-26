@@ -28,7 +28,7 @@ final readonly class OpaqueTokenHandler implements AccessTokenHandlerInterface
     public function __construct(
         private ApiTokenRepository $tokens,
         private DeviceRepository $devices,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private TokenPolicy $policy,
     ) {
@@ -47,7 +47,7 @@ final readonly class OpaqueTokenHandler implements AccessTokenHandlerInterface
             throw new BadCredentialsException('Token inválido ou expirado.');
         }
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return new UserBadge($principal->getUserIdentifier(), static fn () => $principal);
     }

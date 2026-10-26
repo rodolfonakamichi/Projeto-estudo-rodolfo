@@ -16,19 +16,19 @@ final readonly class HealthCommand
     {
     }
 
-    public function __invoke(SymfonyStyle $io): int
+    public function __invoke(SymfonyStyle $console): int
     {
-        $io->writeln('PHP '.\PHP_VERSION);
+        $console->writeln('PHP '.\PHP_VERSION);
 
         try {
-            $io->writeln('MySQL '.$this->database->serverVersion());
-        } catch (\RuntimeException $e) {
-            $io->error($e->getMessage());
+            $console->writeln('MySQL '.$this->database->serverVersion());
+        } catch (\RuntimeException $exception) {
+            $console->error($exception->getMessage());
 
             return Command::FAILURE;
         }
 
-        $io->success('OK');
+        $console->success('OK');
 
         return Command::SUCCESS;
     }

@@ -83,7 +83,7 @@ final class CompanyTest extends TestCase
         $company->touch($t1);
         $company->touch($t2);
 
-        $read = \Closure::bind(fn (string $p): mixed => $this->{$p}, $company, Company::class);
+        $read = \Closure::bind(fn (string $property): mixed => $this->{$property}, $company, Company::class);
         self::assertEquals($t1, $read('createdAt'));
         self::assertEquals($t2, $read('updatedAt'));
     }

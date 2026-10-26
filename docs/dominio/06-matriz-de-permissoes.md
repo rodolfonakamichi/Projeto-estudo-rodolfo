@@ -201,24 +201,29 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 
 - **Seed** de papéis+permissões por `roles`/`role_permissions` no bootstrap da
   empresa (o "template de negócio" da seção 47 pode variar só os padrões).
-- Uma checagem central `PermissionChecker::assert($user, 'command.close', $unitId)`
-  (serviço em `Application`), resolvendo as permissões do usuário a partir de
-  `user_roles` / `role_permissions`. Exposta ao framework como Voter do Symfony
-  Security (ADR-012), para controllers usarem `#[IsGranted]` quando couber.
+- Uma checagem central `PermissionChecker::assert($actorId, Permission::CommandClose, $branchId)`
+  (`Application\Identity\Authorization`), que carrega o usuário e delega para
+  `User::can()` (a regra mora no Domain). O ator vem explícito, não do contexto:
+  o mesmo caso de uso roda por HTTP, CLI ou teste. Exposta ao framework pelo
+  `PermissionVoter` (ADR-012): `isGranted('command.close', $branchId)` /
+  `#[IsGranted('command.close', subject: 'branchId')]`. Aparelho pareado (sem
+  usuário) nunca tem permissão de negócio.
+- UX contextual (§5): `GET /api/me/permissions?branchId=` lista as permissões
+  efetivas; `GET /api/me/permissions/{code}?branchId=` responde 204/403.
 - A checagem acontece no **caso de uso** (`Application`), não no controller nem
   na entidade:
   ```php
-  final class CloseCommand {
-      public function __invoke(CloseCommandInput $in): void {
-          $this->permissions->assert($in->actor, 'command.close', $in->unitId);
-          $command = $this->commands->get($in->commandId);
+  final class CloseCommandHandler {
+      public function __invoke(CloseCommand $input): void {
+          $this->permissions->assert(UserId::fromString($input->actorId), Permission::CommandClose, BranchId::fromString($input->branchId));
+          $command = $this->commands->get(CommandId::fromString($input->commandId));
           $command->close();               // a entidade só sabe a regra "saldo = 0"
           $this->commands->save($command);
       }
   }
   ```
-- Faixa de desconto: `DiscountPolicy::maxPercentFor($roleCodes)` lê
-  `discount_limits` (cache por empresa).
+- Faixa de desconto: `User::maxDiscountIn($branchId)` lê
+  `roles.max_discount_percent`.
 
 ---
 
@@ -232,3 +237,4 @@ A permissão controla o que a API aceita; a UI só **esconde** o que não intere
 | 2026-08-30 | Renomeado `Unit` -> `Branch` (tabela `branches`, coluna `branch_id`); "unidade" vira "filial" na prosa. `unit`/`unit_price` de medida/preço preservados. |
 | 2026-10-23 | Limite de desconto passa a ser coluna de `roles`. Matriz §3 materializada em `Domain\Identity\DefaultRoles` (▲ = concedida); permissões como enum `Permission`; checagem em `User::can()`. |
 | 2026-10-23 | Nova permissão `admin.device.manage` (OWNER/ADMIN/MANAGER) para parear aparelhos (M1.3). Permissão nova = atualizar `DefaultRoles` + migration de dados para empresas existentes. |
+| 2026-10-26 | M1.5: §6 reflete o código — `PermissionChecker` (ator explícito) + `PermissionVoter`; endpoints de UX contextual `/api/me/permissions`. |

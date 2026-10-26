@@ -11,17 +11,17 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class DoctrineApiTokenRepository implements ApiTokenRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function save(ApiToken $token): void
     {
-        $this->em->persist($token);
+        $this->entityManager->persist($token);
     }
 
     public function findByToken(OpaqueToken $token): ?ApiToken
     {
-        return $this->em->getRepository(ApiToken::class)->findOneBy(['tokenHash' => $token->hash()]);
+        return $this->entityManager->getRepository(ApiToken::class)->findOneBy(['tokenHash' => $token->hash()]);
     }
 }

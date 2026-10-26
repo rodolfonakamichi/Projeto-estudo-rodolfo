@@ -13,10 +13,10 @@ final class PercentageTest extends TestCase
     #[DataProvider('validos')]
     public function test_le_o_formato_do_decimal(string $input, int $hundredths, string $output): void
     {
-        $p = Percentage::fromString($input);
+        $percentage = Percentage::fromString($input);
 
-        self::assertSame($hundredths, $p->hundredths());
-        self::assertSame($output, $p->toString());
+        self::assertSame($hundredths, $percentage->hundredths());
+        self::assertSame($output, $percentage->toString());
     }
 
     /** @return iterable<array{string, int, string}> */

@@ -19,27 +19,27 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class DoctrineCompanyRepository implements CompanyRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function save(Company $company): void
     {
-        $this->em->persist($company);
+        $this->entityManager->persist($company);
     }
 
     public function get(CompanyId $id): Company
     {
-        return $this->em->find(Company::class, $id) ?? throw CompanyNotFound::withId($id);
+        return $this->entityManager->find(Company::class, $id) ?? throw CompanyNotFound::withId($id);
     }
 
     public function getBySlug(Slug $slug): Company
     {
-        return $this->em->getRepository(Company::class)->findOneBy(['slug' => $slug]) ?? throw CompanyNotFound::withSlug($slug);
+        return $this->entityManager->getRepository(Company::class)->findOneBy(['slug' => $slug]) ?? throw CompanyNotFound::withSlug($slug);
     }
 
     public function slugExists(Slug $slug): bool
     {
-        return null !== $this->em->getRepository(Company::class)->findOneBy(['slug' => $slug]);
+        return null !== $this->entityManager->getRepository(Company::class)->findOneBy(['slug' => $slug]);
     }
 }

@@ -25,11 +25,11 @@ final readonly class Percentage
     /** Aceita "5", "12.5", "12.50" (formato do DECIMAL do banco). */
     public static function fromString(string $value): self
     {
-        if (1 !== preg_match('/^(\d{1,3})(?:\.(\d{1,2}))?$/', trim($value), $m)) {
+        if (1 !== preg_match('/^(\d{1,3})(?:\.(\d{1,2}))?$/', trim($value), $matches)) {
             throw new \InvalidArgumentException("Percentual inválido: \"{$value}\"");
         }
 
-        return new self((int) $m[1] * 100 + (int) str_pad($m[2] ?? '0', 2, '0'));
+        return new self((int) $matches[1] * 100 + (int) str_pad($matches[2] ?? '0', 2, '0'));
     }
 
     public function hundredths(): int

@@ -32,8 +32,8 @@ abstract class IdentifierType extends Type
 
         try {
             return $this->identifierClass()::fromString((string) $value);
-        } catch (\InvalidArgumentException $e) {
-            throw ValueNotConvertible::new($value, $this->identifierClass(), $e->getMessage(), $e);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValueNotConvertible::new($value, $this->identifierClass(), $exception->getMessage(), $exception);
         }
     }
 

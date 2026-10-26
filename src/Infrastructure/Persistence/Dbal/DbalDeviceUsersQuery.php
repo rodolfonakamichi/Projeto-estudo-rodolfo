@@ -32,7 +32,7 @@ final readonly class DbalDeviceUsersQuery implements DeviceUsersQuery
             SQL, ['device' => $deviceId->toString()]);
 
         return array_map(
-            static fn (array $r): DeviceUser => new DeviceUser((string) $r['id'], (string) $r['name']),
+            static fn (array $row): DeviceUser => new DeviceUser((string) $row['id'], (string) $row['name']),
             $rows,
         );
     }

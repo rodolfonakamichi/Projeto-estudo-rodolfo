@@ -29,11 +29,11 @@ final readonly class OpaqueToken
 
     public static function fromPlain(#[\SensitiveParameter] string $plain): self
     {
-        if (1 !== preg_match(self::PATTERN, $plain, $m)) {
+        if (1 !== preg_match(self::PATTERN, $plain, $matches)) {
             throw new InvalidCredentials();
         }
 
-        return new self(TokenKind::from($m[1]), $plain);
+        return new self(TokenKind::from($matches[1]), $plain);
     }
 
     public function kind(): TokenKind

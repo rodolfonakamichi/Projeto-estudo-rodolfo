@@ -14,18 +14,18 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class DoctrineUserRepository implements UserRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function save(User $user): void
     {
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
     }
 
     public function get(UserId $id): User
     {
-        return $this->em->find(User::class, $id) ?? throw UserNotFound::withId($id);
+        return $this->entityManager->find(User::class, $id) ?? throw UserNotFound::withId($id);
     }
 
     public function emailExists(CompanyId $companyId, Email $email): bool
@@ -35,6 +35,6 @@ final readonly class DoctrineUserRepository implements UserRepository
 
     public function findByEmail(CompanyId $companyId, Email $email): ?User
     {
-        return $this->em->getRepository(User::class)->findOneBy(['company' => $companyId, 'email' => $email]);
+        return $this->entityManager->getRepository(User::class)->findOneBy(['company' => $companyId, 'email' => $email]);
     }
 }

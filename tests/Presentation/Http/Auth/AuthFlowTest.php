@@ -70,8 +70,8 @@ final class AuthFlowTest extends WebTestCase
 
     public function test_bloqueia_apos_5_falhas(): void
     {
-        for ($i = 0; $i < 5; ++$i) {
-            $this->json('POST', '/api/auth/login', ['company' => 'bar-do-ze', 'email' => 'ana@bar.com', 'password' => "chute{$i}"]);
+        for ($attempt = 0; $attempt < 5; ++$attempt) {
+            $this->json('POST', '/api/auth/login', ['company' => 'bar-do-ze', 'email' => 'ana@bar.com', 'password' => "chute{$attempt}"]);
             self::assertResponseStatusCodeSame(401);
         }
 

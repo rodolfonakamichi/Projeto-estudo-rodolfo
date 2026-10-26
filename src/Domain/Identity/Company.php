@@ -103,7 +103,7 @@ class Company implements Timestamped
     /** @return list<Branch> */
     public function activeBranches(): array
     {
-        return array_values(array_filter($this->branches(), static fn (Branch $b): bool => $b->isActive()));
+        return array_values(array_filter($this->branches(), static fn (Branch $branch): bool => $branch->isActive()));
     }
 
     public function enableCapability(Capability $capability): void

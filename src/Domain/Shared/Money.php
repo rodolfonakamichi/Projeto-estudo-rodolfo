@@ -93,8 +93,8 @@ final readonly class Money
 
         // 2) os centavos que sobraram vão 1 a 1, começando pela primeira parte
         $remainder = $this->cents - $distributed;
-        for ($i = 0; $i < $remainder; ++$i) {
-            ++$parts[$i];
+        for ($index = 0; $index < $remainder; ++$index) {
+            ++$parts[$index];
         }
 
         // 3) transforma cada valor de volta em Money

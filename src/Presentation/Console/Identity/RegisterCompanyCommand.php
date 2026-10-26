@@ -33,7 +33,7 @@ final readonly class RegisterCompanyCommand
      * @param list<string> $capability
      */
     public function __invoke(
-        SymfonyStyle $io,
+        SymfonyStyle $console,
         #[Argument('Nome da empresa')] string $name,
         #[Argument('Slug único (minúsculas, dígitos, hífen)')] string $slug,
         #[Option('Nome da primeira filial')] string $branch = 'Matriz',
@@ -53,19 +53,19 @@ final readonly class RegisterCompanyCommand
                 timezone: $timezone,
                 capabilities: array_map(self::capability(...), $capability),
             ));
-        } catch (DomainException|\InvalidArgumentException $e) {
-            $io->error($e->getMessage());
+        } catch (DomainException|\InvalidArgumentException $exception) {
+            $console->error($exception->getMessage());
 
             return Command::FAILURE;
         }
 
-        $io->success("Empresa {$companyId} cadastrada (filial {$branchId}).");
+        $console->success("Empresa {$companyId} cadastrada (filial {$branchId}).");
 
         return Command::SUCCESS;
     }
 
     private static function capability(string $value): Capability
     {
-        return Capability::tryFrom($value) ?? throw new \InvalidArgumentException(\sprintf('Capability "%s" não existe. Válidas: %s.', $value, implode(', ', array_map(static fn (Capability $c): string => $c->value, Capability::cases()))));
+        return Capability::tryFrom($value) ?? throw new \InvalidArgumentException(\sprintf('Capability "%s" não existe. Válidas: %s.', $value, implode(', ', array_map(static fn (Capability $capability): string => $capability->value, Capability::cases()))));
     }
 }

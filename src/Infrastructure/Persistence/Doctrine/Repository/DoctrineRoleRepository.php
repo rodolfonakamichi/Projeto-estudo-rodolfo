@@ -13,18 +13,18 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class DoctrineRoleRepository implements RoleRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function save(Role $role): void
     {
-        $this->em->persist($role);
+        $this->entityManager->persist($role);
     }
 
     public function getByCode(CompanyId $companyId, RoleCode $code): Role
     {
-        return $this->em->getRepository(Role::class)->findOneBy(['company' => $companyId, 'code' => $code])
+        return $this->entityManager->getRepository(Role::class)->findOneBy(['company' => $companyId, 'code' => $code])
             ?? throw RoleNotFound::withCode($code);
     }
 }

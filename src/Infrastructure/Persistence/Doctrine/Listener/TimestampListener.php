@@ -24,8 +24,8 @@ final readonly class TimestampListener
 
     public function onFlush(OnFlushEventArgs $args): void
     {
-        $em = $args->getObjectManager();
-        $uow = $em->getUnitOfWork();
+        $entityManager = $args->getObjectManager();
+        $uow = $entityManager->getUnitOfWork();
         $now = $this->clock->now();
 
         foreach ([...$uow->getScheduledEntityInsertions(), ...$uow->getScheduledEntityUpdates()] as $entity) {
@@ -35,7 +35,7 @@ final readonly class TimestampListener
 
             $entity->touch($now);
             // a entidade mudou depois do cálculo do changeset: recalcular
-            $uow->recomputeSingleEntityChangeSet($em->getClassMetadata($entity::class), $entity);
+            $uow->recomputeSingleEntityChangeSet($entityManager->getClassMetadata($entity::class), $entity);
         }
     }
 }

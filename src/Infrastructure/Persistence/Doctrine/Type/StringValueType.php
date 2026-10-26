@@ -40,8 +40,8 @@ abstract class StringValueType extends Type
 
         try {
             return $this->fromString((string) $value);
-        } catch (\InvalidArgumentException $e) {
-            throw ValueNotConvertible::new($value, $this->valueClass(), $e->getMessage(), $e);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValueNotConvertible::new($value, $this->valueClass(), $exception->getMessage(), $exception);
         }
     }
 

@@ -17,6 +17,7 @@ use App\Domain\Identity\OpaqueToken;
 use App\Domain\Identity\TokenKind;
 use App\Domain\Identity\UserId;
 use App\Domain\Identity\UserRepository;
+use App\Domain\Identity\UserRole;
 use App\Infrastructure\Security\AuthenticatedDevice;
 use App\Infrastructure\Security\AuthenticatedUser;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -111,9 +112,9 @@ final readonly class AuthController
             'companyId' => $user->companyId()->toString(),
             'name' => $user->name(),
             'email' => $user->email()->toString(),
-            'roles' => array_map(static fn ($a): array => [
-                'code' => $a->role()->code()->toString(),
-                'branchId' => $a->branchId()?->toString(),
+            'roles' => array_map(static fn (UserRole $assignment): array => [
+                'code' => $assignment->role()->code()->toString(),
+                'branchId' => $assignment->branchId()?->toString(),
             ], $user->roleAssignments()),
         ]);
     }
@@ -133,10 +134,10 @@ final readonly class AuthController
 
         try {
             $attempt();
-        } catch (InvalidCredentials $e) {
+        } catch (InvalidCredentials $exception) {
             $limiter->consume();
 
-            throw $e;
+            throw $exception;
         }
 
         $limiter->reset();

@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M1.4 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M1.5 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -18,8 +18,8 @@
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
 - **Milestone atual:** **M1** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
-  M1.3 `7958884`. **M1.4 — multiempresa** implementado (não commitado).
-  Próximo: **M1.5 — autorização**.
+  M1.3 `7958884`. M1.4 `1e6a37a`. **M1.5 — autorização** implementado (não
+  commitado). Próximo: **M1.6 — seed demo**.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -113,7 +113,7 @@ lista usuários e troca PIN por token); token de usuário **expira 12h após o
 | Migrations `api_tokens`, `devices` + **migration de dados** (`admin.device.manage` p/ empresas existentes) | `migrations/` |
 | Testes: `ApiTokenTest` (expiração), `AuthFlowTest` (HTTP ponta a ponta, MockClock, 429) — 69 verdes | `tests/` |
 
-### M1.4 — multiempresa (não commitado)
+### M1.4 — multiempresa (commit `1e6a37a`)
 Decisão do usuário: filtro **ligado na autenticação** (token de usuário ou de
 aparelho); rotas públicas e CLI sem filtro, com `companyId` explícito nos repositórios.
 
@@ -127,6 +127,21 @@ aparelho); rotas públicas e CLI sem filtro, com `companyId` explícito nos repo
 | Testes: aceite "A não vê B mesmo forçando id" (find, DQL, JOIN, slug), cobertura do filtro, contexto via HTTP — 77 verdes | `tests/Integration/MultiCompany/`, `AuthFlowTest` |
 | ADR-004 revisada | `docs/dominio/00-decisoes-arquiteturais.md` |
 
+### M1.5 — autorização (não commitado)
+Decisão do usuário: aceite HTTP por um endpoint **"posso?"** (o `command.close`
+real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
+(única exceção: `$db`) — renomeado no projeto todo.
+
+| Entrega | Onde |
+|---|---|
+| `PermissionChecker` (`can`/`assert`, ator explícito → `User::can`) | `src/Application/Identity/Authorization/` |
+| `CapabilityChecker::has(CompanyId, Capability)` | `src/Application/Identity/Authorization/` |
+| `PermissionVoter` (atributo = código do doc 06, sujeito = filial) | `src/Infrastructure/Security/` |
+| `User::permissionsIn(?BranchId)` | `src/Domain/Identity/User.php` |
+| `GET /api/me/permissions[?branchId=]` (lista) e `/api/me/permissions/{code}` (204/403/404) | `src/Presentation/Http/Identity/` |
+| `PairDeviceHandler` usa o `PermissionChecker` | `src/Application/Identity/Auth/` |
+| Testes: aceite WAITER 403 / CASHIER 204 em `command.close`, `hotel` = false — 83 verdes | `tests/Presentation/Http/Identity/`, `tests/Integration/Identity/` |
+
 ---
 
 ## Próximos passos — M1 sobre Symfony
@@ -134,9 +149,7 @@ aparelho); rotas públicas e CLI sem filtro, com `companyId` explícito nos repo
 1. ~~Agregado Company~~ (M1.1). ~~User + Role~~ (M1.2).
 2. ~~Autenticação~~ (M1.3).
 3. ~~Multiempresa~~ (M1.4).
-4. **M1.5 — Autorização:** Voter que delega para `User::can()`;
-   `CapabilityChecker` (`hotel` = false na demo). Aceite HTTP: WAITER 403 /
-   CASHIER 200 em `command.close`.
+4. ~~Autorização~~ (M1.5).
 5. **M1.6 — Seed demo:** `app:seed-demo` (empresa + filial + 1 usuário por papel).
 6. **`counters`** (numeração diária de comanda) — fica para o M3, onde é usado.
 
@@ -184,6 +197,11 @@ aparelho); rotas públicas e CLI sem filtro, com `companyId` explícito nos repo
   não vai ao banco) nem DBAL/SQL puro — read model filtra `company_id` à mão.
   Entidade nova: ter a associação `company` ou entrar na lista de filhas do
   `CompanyFilterCoverageTest`.
+- **Serviço privado sem consumidor** some do container compilado (o teste não
+  acha com `getContainer()->get()`): montar à mão no teste até ter consumidor
+  (`CapabilityChecker`).
+- **Nomes por extenso:** `$entityManager`, `$exception`, `$permission`... nunca
+  sílaba. Única exceção combinada: `$db`.
 - **Método de trabalho:** explicar cada conceito/padrão ao aplicar; usar as
   ferramentas (Maker, `make:migration`) e revisar o gerado; sempre `composer check`
   antes de commitar. Identidade git local = pessoal (`rodolfo.nakamichi11@gmail.com`).

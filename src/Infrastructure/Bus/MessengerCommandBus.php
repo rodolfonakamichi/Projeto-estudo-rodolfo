@@ -27,10 +27,10 @@ final readonly class MessengerCommandBus implements CommandBus
     {
         try {
             $this->bus->dispatch($command);
-        } catch (HandlerFailedException $e) {
+        } catch (HandlerFailedException $exception) {
             // O Messenger embrulha a exceção do handler; devolvemos a original
             // para que exceções de domínio cheguem intactas a quem chamou.
-            throw $e->getPrevious() ?? $e;
+            throw $exception->getPrevious() ?? $exception;
         }
     }
 }

@@ -84,7 +84,7 @@ class Role implements Timestamped
     /** @return list<Permission> */
     public function permissions(): array
     {
-        return array_values($this->permissions->map(static fn (RolePermission $r): Permission => $r->permission())->toArray());
+        return array_values($this->permissions->map(static fn (RolePermission $rolePermission): Permission => $rolePermission->permission())->toArray());
     }
 
     public function limitDiscountTo(?Percentage $maxDiscount): void

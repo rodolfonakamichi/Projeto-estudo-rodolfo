@@ -36,7 +36,7 @@ final readonly class RegisterUserCommand
      * @param list<string> $role
      */
     public function __invoke(
-        SymfonyStyle $io,
+        SymfonyStyle $console,
         #[Argument('Slug da empresa')] string $company,
         #[Argument('Nome')] string $name,
         #[Argument('E-mail')] string $email,
@@ -48,7 +48,7 @@ final readonly class RegisterUserCommand
 
         try {
             $companyId = $this->companies->getBySlug(Slug::fromString($company))->id();
-            $password ??= (string) $io->askHidden('Senha');
+            $password ??= (string) $console->askHidden('Senha');
 
             $this->bus->dispatch(new RegisterUser(
                 userId: $userId->toString(),
@@ -59,13 +59,13 @@ final readonly class RegisterUserCommand
                 roles: array_map(self::assignment(...), $role),
                 pin: $pin,
             ));
-        } catch (DomainException|\InvalidArgumentException $e) {
-            $io->error($e->getMessage());
+        } catch (DomainException|\InvalidArgumentException $exception) {
+            $console->error($exception->getMessage());
 
             return Command::FAILURE;
         }
 
-        $io->success("Usuário {$userId} cadastrado.");
+        $console->success("Usuário {$userId} cadastrado.");
 
         return Command::SUCCESS;
     }
