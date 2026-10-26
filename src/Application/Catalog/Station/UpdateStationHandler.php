@@ -23,7 +23,7 @@ final readonly class UpdateStationHandler implements CommandHandler
     public function __invoke(UpdateStation $command): void
     {
         $station = $this->stations->get(StationId::fromString($command->stationId));
-        $this->authorizer->authorize(UserId::fromString($command->actorId), Permission::CatalogStationManage, $station->branchId());
+        $this->authorizer->authorize(UserId::fromString($command->actorId), $station->branchId(), Permission::CatalogStationManage);
 
         if (null !== $command->name) {
             if ($this->stations->nameExists($station->branchId(), $command->name, except: $station->id())) {

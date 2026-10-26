@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M2.2 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M2.3 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -17,8 +17,8 @@
   (aproveita os docs atualizados e os VOs do M1).
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
-- **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 implementado
-  (não commitado). Próximo: **M2.3 — API de produto**.
+- **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 `c8a19e3`.
+  M2.3 implementado (não commitado). Próximo: **M2.4 — busca**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -169,7 +169,7 @@ Decisões do usuário (2026-10-26): cardápio **por filial**; **todo produto tem
 | API: `GET/POST /api/branches/{id}/stations`, `PATCH /api/stations/{id}`, `GET/POST /api/branches/{id}/categories`, `PATCH/DELETE /api/categories/{id}` | `src/Presentation/Http/Catalog/` |
 | Testes: unit de Station/Category, HTTP (permissão, capability, nome único, isolamento 404, arquivar) — 97 verdes; trait `JsonApiClient` | `tests/` |
 
-### M2.2 — agregado Product (não commitado)
+### M2.2 — agregado Product (commit `c8a19e3`)
 Decisão do usuário: grupos de modificadores **por produto** (como o doc 03).
 
 | Entrega | Onde |
@@ -181,14 +181,26 @@ Decisão do usuário: grupos de modificadores **por produto** (como o doc 03).
 | Migration products, product_variants, modifier_groups, modifiers | `migrations/Version20261026202617.php` |
 | Testes: aceite Chopp 300/500ml e X-Burger Ponto(1)/Adicionais(0–5) no Domain, invariantes, ida e volta no MySQL — 111 verdes | `tests/Domain/Catalog/`, `tests/Integration/Catalog/` |
 
+### M2.3 — API de produto (não commitado)
+Regra tomada (doc 06): operação que **define valor** exige `catalog.price.manage`
+além de `catalog.product.manage`.
+
+| Entrega | Onde |
+|---|---|
+| Casos de uso `CreateProduct` (completo, com grupos), `UpdateProduct` (PATCH; `null` limpa categoria/estação), `AddProductVariant`, `UpdateProductVariant`, `AddModifierGroup`, `ChangeModifierGroupLimits`, `AddModifier`, `ChangeModifierStatus`; inputs `VariantInput`/`ModifierGroupInput`/`ModifierInput` | `src/Application/Catalog/Product/` |
+| `CatalogReferences`: categoria/estação da mesma filial (senão 404), não arquivada/ativa | `src/Application/Catalog/` |
+| `BranchAuthorizer::authorize(actor, branch, ...permissões)` (variádico) | `src/Application/Identity/Authorization/` |
+| Read model `products()`/`product()` em lote (4 consultas, sem N+1) + views | `src/Application/Catalog/`, `DbalCatalogQuery` |
+| API: `GET/POST /api/branches/{id}/products[?categoryId=]`, `GET/PATCH /api/products/{id}`, `POST .../variants`, `PATCH .../variants/{id}`, `POST .../modifier-groups`, `PATCH .../modifier-groups/{id}`, `POST .../modifiers`, `PATCH .../modifiers/{id}` — respostas devolvem o produto atualizado | `src/Presentation/Http/Catalog/ProductController.php` |
+| Testes: aceites Chopp/X-Burger pela API, 422 com mensagem do Domain, preço × papel "CARDAPISTA", PATCH ausente × null, isolamento — 119 verdes | `tests/Presentation/Http/Catalog/ProductApiTest.php` |
+
 ---
 
 ## Próximos passos — M2 (Catálogo)
 
 1. ~~M2.1 — estações e categorias~~.
 2. ~~M2.2 — agregado `Product`~~.
-3. **M2.3 — API de produto**; aceite "Chopp 300/500ml" e "X-Burger com Ponto
-   (1 obrigatório) e Adicionais (0–5)".
+3. ~~M2.3 — API de produto~~.
 4. **M2.4 — busca** `GET /catalog/search?q=` (FULLTEXT) + seed de 1k produtos, < 50 ms.
 5. **M2.5 — atalhos do operador** (só estrutura).
 
@@ -254,6 +266,11 @@ Decisão do usuário: grupos de modificadores **por produto** (como o doc 03).
   tabela no `postGenerateSchemaTable` faz o ORM recriar o schema e as tabelas
   seguintes perdem o charset (`DEFAULT CHARACTER SET` some da migration).
 - **Rota com `Requirement::ULID`**: ID malformado vira 404 antes do controller.
+- **Teste HTTP + container:** depois de uma requisição, o container do teste
+  guarda o contexto/filtro da empresa logada até o próximo request. Preparar
+  dados de OUTRA empresa antes da 1ª requisição (no `setUp`).
+- **PATCH com "limpar":** DTO não distingue ausente de `null` — o controller
+  olha as chaves do JSON (`$request->toArray()`) e passa flags ao comando.
 - **Nomes por extenso:** `$entityManager`, `$exception`, `$permission`... nunca
   sílaba. Única exceção combinada: `$db`.
 - **Método de trabalho:** explicar cada conceito/padrão ao aplicar; usar as

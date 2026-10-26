@@ -25,7 +25,7 @@ final readonly class CreateCategoryHandler implements CommandHandler
     public function __invoke(CreateCategory $command): void
     {
         $branchId = BranchId::fromString($command->branchId);
-        $companyId = $this->authorizer->authorize(UserId::fromString($command->actorId), Permission::CatalogProductManage, $branchId);
+        $companyId = $this->authorizer->authorize(UserId::fromString($command->actorId), $branchId, Permission::CatalogProductManage);
 
         if ($this->categories->nameExists($branchId, $command->name)) {
             throw new DomainException("Já existe a categoria \"{$command->name}\" nesta filial.");

@@ -28,7 +28,7 @@ final readonly class CreateStationHandler implements CommandHandler
     public function __invoke(CreateStation $command): void
     {
         $branchId = BranchId::fromString($command->branchId);
-        $companyId = $this->authorizer->authorize(UserId::fromString($command->actorId), Permission::CatalogStationManage, $branchId);
+        $companyId = $this->authorizer->authorize(UserId::fromString($command->actorId), $branchId, Permission::CatalogStationManage);
 
         if (!$this->capabilities->has($companyId, Capability::Kitchen)) {
             throw new DomainException('Estações de produção exigem a capability "kitchen" ligada na empresa.');

@@ -18,7 +18,7 @@ use App\Domain\Shared\NotFound;
  * em dado de filial (catálogo, mesas, caixa...). Garante, nesta ordem:
  *   1. a filial é da empresa do ator (senão 404 — não revela que existe);
  *   2. a filial está ativa;
- *   3. o ator tem a permissão nela (senão 403).
+ *   3. o ator tem TODAS as permissões pedidas nela (senão 403).
  * Devolve a empresa, que o caso de uso grava no agregado.
  *
  * Sem o passo 1, um papel "da empresa toda" passaria no `can()` com o ID de
@@ -37,7 +37,7 @@ final readonly class BranchAuthorizer
      * @throws DomainException filial inativa
      * @throws AccessDenied    sem a permissão
      */
-    public function authorize(UserId $actorId, Permission $permission, BranchId $branchId): CompanyId
+    public function authorize(UserId $actorId, BranchId $branchId, Permission $permission, Permission ...$morePermissions): CompanyId
     {
         $company = $this->users->get($actorId)->company();
 
@@ -45,7 +45,9 @@ final readonly class BranchAuthorizer
             throw new DomainException('Filial inativa.');
         }
 
-        $this->permissions->assert($actorId, $permission, $branchId);
+        foreach ([$permission, ...$morePermissions] as $required) {
+            $this->permissions->assert($actorId, $required, $branchId);
+        }
 
         return $company->id();
     }
