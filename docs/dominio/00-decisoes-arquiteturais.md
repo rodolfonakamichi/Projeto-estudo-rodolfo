@@ -380,7 +380,7 @@ projeto** usando as ferramentas atuais do ecossistema.
   contextos seguintes) guarda `CompanyId`/`BranchId`/`CategoryId`... como campo,
   não como associação Doctrine — não importa entidades de outro contexto nem
   carrega agregado alheio por lazy-loading. As FKs continuam no banco: o
-  listener `IdentifierForeignKeys` (`postGenerateSchemaTable`) cria a FK de
+  listener `IdentifierForeignKeys` (`postGenerateSchema`) cria a FK de
   todo campo cujo tipo é um ID tipado, então `make:migration` e
   `schema:validate` enxergam. O `CompanyFilter` reconhece o campo `companyId`.
   *Legado M1:* em Identity, `Role`/`User` apontam para `Company` (e `UserRole`

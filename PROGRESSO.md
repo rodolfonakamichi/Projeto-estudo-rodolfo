@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M2.1 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M2.2 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -17,8 +17,8 @@
   (aproveita os docs atualizados e os VOs do M1).
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
-- **Milestone atual:** **M2 — Catálogo.** M2.1 implementado (não commitado).
-  Próximo: **M2.2 — agregado Product**.
+- **Milestone atual:** **M2 — Catálogo.** M2.1 `2c35dd2`. M2.2 implementado
+  (não commitado). Próximo: **M2.3 — API de produto**.
 - **M1 concluído** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
   M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. M1.6 `db5789c`.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
@@ -151,7 +151,7 @@ real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
 | Despacha os casos de uso (não SQL) numa transação só; idempotente; recusa rodar em `prod` | idem |
 | Testes: 1 usuário por papel, `hotel` = false na demo, reexecução não duplica — 85 verdes | `tests/Presentation/Console/` |
 
-### M2.1 — estações e categorias (não commitado)
+### M2.1 — estações e categorias (commit `2c35dd2`)
 Decisões do usuário (2026-10-26): cardápio **por filial**; **todo produto tem
 ≥1 variação** (sem `base_price_cents`); **só API** (telas admin adiadas);
 **referência entre agregados por ID** (doc 02), com FK no banco por convenção.
@@ -169,13 +169,24 @@ Decisões do usuário (2026-10-26): cardápio **por filial**; **todo produto tem
 | API: `GET/POST /api/branches/{id}/stations`, `PATCH /api/stations/{id}`, `GET/POST /api/branches/{id}/categories`, `PATCH/DELETE /api/categories/{id}` | `src/Presentation/Http/Catalog/` |
 | Testes: unit de Station/Category, HTTP (permissão, capability, nome único, isolamento 404, arquivar) — 97 verdes; trait `JsonApiClient` | `tests/` |
 
+### M2.2 — agregado Product (não commitado)
+Decisão do usuário: grupos de modificadores **por produto** (como o doc 03).
+
+| Entrega | Onde |
+|---|---|
+| `Product` (raiz) + `ProductVariant` (preço, ≥1 ativa), `ModifierGroup` (min/max alcançável) + `Modifier` (delta pode ser ≤ 0); `NewVariant`/`NewModifier`; `ProductKind`; `CatalogName` | `src/Domain/Catalog/` |
+| Tipo `money` (Money ⇄ BIGINT centavos, só BRL) + tipos de ID | `.../Doctrine/Type/` |
+| Mapeamento XML com cascade persist + orphan-removal e `order-by sortOrder` | `.../Doctrine/Mapping/Catalog.*.orm.xml` |
+| `IdentifierForeignKeys` passou para `postGenerateSchema` (corrige o charset perdido) | `.../Doctrine/Schema/` |
+| Migration products, product_variants, modifier_groups, modifiers | `migrations/Version20261026202617.php` |
+| Testes: aceite Chopp 300/500ml e X-Burger Ponto(1)/Adicionais(0–5) no Domain, invariantes, ida e volta no MySQL — 111 verdes | `tests/Domain/Catalog/`, `tests/Integration/Catalog/` |
+
 ---
 
 ## Próximos passos — M2 (Catálogo)
 
 1. ~~M2.1 — estações e categorias~~.
-2. **M2.2 — agregado `Product`**: `ProductVariant[]` (≥1 ativa), `ModifierGroup[]`
-   → `Modifier[]` (min/max coerente), categoria e estação por ID; migrations.
+2. ~~M2.2 — agregado `Product`~~.
 3. **M2.3 — API de produto**; aceite "Chopp 300/500ml" e "X-Burger com Ponto
    (1 obrigatório) e Adicionais (0–5)".
 4. **M2.4 — busca** `GET /catalog/search?q=` (FULLTEXT) + seed de 1k produtos, < 50 ms.
@@ -239,8 +250,9 @@ Decisões do usuário (2026-10-26): cardápio **por filial**; **todo produto tem
 - **Serviço privado sem consumidor** some do container compilado (o teste não
   acha com `getContainer()->get()`): montar à mão no teste até ter consumidor
   (`CapabilityChecker`).
-- **Listener que reconstrói tabela** (`setClassTable` com `Table::edit()`) perde
-  as opções (charset) — conferir o `DEFAULT CHARACTER SET` na migration gerada.
+- **Listener de schema:** usar `postGenerateSchema` (uma vez, no fim). Trocar
+  tabela no `postGenerateSchemaTable` faz o ORM recriar o schema e as tabelas
+  seguintes perdem o charset (`DEFAULT CHARACTER SET` some da migration).
 - **Rota com `Requirement::ULID`**: ID malformado vira 404 antes do controller.
 - **Nomes por extenso:** `$entityManager`, `$exception`, `$permission`... nunca
   sílaba. Única exceção combinada: `$db`.

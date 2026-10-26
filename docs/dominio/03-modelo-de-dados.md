@@ -146,7 +146,11 @@ migration final.
 > sempre aponta para uma variação — um caminho só de preço.
 
 ### `modifier_groups`
-| id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`Ponto`, `Adicionais`) | min_select INT | max_select INT | is_required TINYINT(1) | sort_order INT |
+| id | CHAR(26) PK | product_id FK | name VARCHAR(80) (`Ponto`, `Adicionais`) | min_select INT | max_select INT | sort_order INT | `UNIQUE (product_id, name)` |
+
+> Grupo **por produto** (decisão 2026-10-26). Sem `is_required`: obrigatório =
+> `min_select >= 1` (uma fonte só). Invariante: `0 ≤ min ≤ max`, `max ≥ 1`, e
+> `min ≤ modificadores ativos` (o mínimo tem que ser alcançável).
 
 ### `modifiers`
 | id | CHAR(26) PK | modifier_group_id FK | name VARCHAR(80) | price_delta_cents BIGINT (pode ser 0 ou negativo) | is_active TINYINT(1) | sort_order INT |
@@ -380,3 +384,4 @@ payments 1─0..1 cash_movements
 | 2026-10-23 | M1.2: `discount_limits` removida — limite vira `roles.max_discount_percent`. `role_permissions` PK `(permission, role_id)` + índice em `role_id`. Login por slug + e-mail; PIN após escolher o usuário. |
 | 2026-10-23 | M1.3: tabela `devices` (aparelho pareado); `api_tokens` com prefixo `u_` e expiração deslizante. |
 | 2026-10-26 | M2: cardápio por filial; sem `products.base_price_cents` — todo produto tem ≥1 variação, `product_variant_id` obrigatório em `command_items`/`order_items`; `stations`/`categories` com timestamps; FKs de ID por convenção (ADR-012). |
+| 2026-10-26 | M2.2: `modifier_groups` sem `is_required` (derivado de `min_select`), grupos por produto; nomes únicos por produto/grupo; `products` com `INDEX (branch_id, is_active)` e timestamps. |

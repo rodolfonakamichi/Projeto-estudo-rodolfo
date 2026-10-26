@@ -6,7 +6,8 @@ namespace App\Infrastructure\Persistence\Doctrine\Schema;
 
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
-use Doctrine\ORM\Tools\Event\GenerateSchemaTableEventArgs;
+use Doctrine\DBAL\Schema\TableEditor;
+use Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs;
 use Doctrine\ORM\Tools\ToolEvents;
 
 /**
@@ -17,8 +18,12 @@ use Doctrine\ORM\Tools\ToolEvents;
  *
  * Roda quando o Doctrine monta o schema esperado (make:migration,
  * schema:validate), então migration e validação enxergam as FKs.
+ *
+ * Evento `postGenerateSchema` (uma vez, com todas as tabelas prontas) e não
+ * `postGenerateSchemaTable`: trocar a tabela no meio da geração fazia o ORM
+ * recriar o schema, e as tabelas seguintes perdiam o charset padrão.
  */
-#[AsDoctrineListener(event: ToolEvents::postGenerateSchemaTable)]
+#[AsDoctrineListener(event: ToolEvents::postGenerateSchema)]
 final class IdentifierForeignKeys
 {
     /** tipo DBAL do campo => [tabela referenciada, ON DELETE (null = RESTRICT)] */
@@ -30,32 +35,39 @@ final class IdentifierForeignKeys
         'station_id' => ['stations', null],
     ];
 
-    public function postGenerateSchemaTable(GenerateSchemaTableEventArgs $event): void
+    public function postGenerateSchema(GenerateSchemaEventArgs $event): void
     {
-        $metadata = $event->getClassMetadata();
-        $table = $event->getClassTable();
-        $tableName = $table->getObjectName()->toString();
-        $editor = null;
+        $schemaEditor = $event->getSchema()->edit();
 
-        foreach ($metadata->fieldMappings as $field => $mapping) {
-            $reference = self::REFERENCES[$mapping->type] ?? null;
-            if (null === $reference || $metadata->isIdentifier($field)) {
-                continue;
+        foreach ($event->getEntityManager()->getMetadataFactory()->getAllMetadata() as $metadata) {
+            $tableName = $metadata->getTableName();
+            $foreignKeys = [];
+
+            foreach ($metadata->fieldMappings as $field => $mapping) {
+                $reference = self::REFERENCES[$mapping->type] ?? null;
+                if (null === $reference || $metadata->isIdentifier($field)) {
+                    continue;
+                }
+
+                [$foreignTable, $onDelete] = $reference;
+                $foreignKeys[] = new ForeignKeyConstraint(
+                    localColumnNames: [$mapping->columnName],
+                    foreignTableName: $foreignTable,
+                    foreignColumnNames: ['id'],
+                    name: "fk_{$tableName}_{$mapping->columnName}",
+                    options: null === $onDelete ? [] : ['onDelete' => $onDelete],
+                );
             }
 
-            [$foreignTable, $onDelete] = $reference;
-            $editor ??= $table->edit();
-            $editor->addForeignKeyConstraint(new ForeignKeyConstraint(
-                localColumnNames: [$mapping->columnName],
-                foreignTableName: $foreignTable,
-                foreignColumnNames: ['id'],
-                name: "fk_{$tableName}_{$mapping->columnName}",
-                options: null === $onDelete ? [] : ['onDelete' => $onDelete],
-            ));
+            if ([] !== $foreignKeys && '' !== $tableName) {
+                $schemaEditor->modifyTableByUnquotedName($tableName, static function (TableEditor $table) use ($foreignKeys): void {
+                    foreach ($foreignKeys as $foreignKey) {
+                        $table->addForeignKeyConstraint($foreignKey);
+                    }
+                });
+            }
         }
 
-        if (null !== $editor) {
-            $event->setClassTable($editor->create());
-        }
+        $event->setSchema($schemaEditor->create());
     }
 }

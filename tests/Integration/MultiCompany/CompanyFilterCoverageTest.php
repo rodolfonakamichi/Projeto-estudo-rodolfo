@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\MultiCompany;
 
+use App\Domain\Catalog\Modifier;
+use App\Domain\Catalog\ModifierGroup;
+use App\Domain\Catalog\ProductVariant;
 use App\Domain\Identity\RolePermission;
 use App\Domain\Identity\UserRole;
 use App\Infrastructure\Persistence\Doctrine\Filter\CompanyFilter;
@@ -21,6 +24,9 @@ final class CompanyFilterCoverageTest extends KernelTestCase
     private const AGGREGATE_CHILDREN = [
         RolePermission::class, // raiz: Role
         UserRole::class,       // raiz: User
+        ProductVariant::class, // raiz: Product
+        ModifierGroup::class,  // raiz: Product
+        Modifier::class,       // raiz: Product (via ModifierGroup)
     ];
 
     public function test_toda_entidade_e_filtrada_ou_filha_declarada(): void

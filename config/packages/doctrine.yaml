@@ -16,6 +16,11 @@ doctrine:
             device_id: App\Infrastructure\Persistence\Doctrine\Type\DeviceIdType
             station_id: App\Infrastructure\Persistence\Doctrine\Type\StationIdType
             category_id: App\Infrastructure\Persistence\Doctrine\Type\CategoryIdType
+            product_id: App\Infrastructure\Persistence\Doctrine\Type\ProductIdType
+            product_variant_id: App\Infrastructure\Persistence\Doctrine\Type\ProductVariantIdType
+            modifier_group_id: App\Infrastructure\Persistence\Doctrine\Type\ModifierGroupIdType
+            modifier_id: App\Infrastructure\Persistence\Doctrine\Type\ModifierIdType
+            money: App\Infrastructure\Persistence\Doctrine\Type\MoneyType
             slug: App\Infrastructure\Persistence\Doctrine\Type\SlugType
             email: App\Infrastructure\Persistence\Doctrine\Type\EmailType
             role_code: App\Infrastructure\Persistence\Doctrine\Type\RoleCodeType
