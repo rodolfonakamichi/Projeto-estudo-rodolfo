@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- PK composta (lista, produto): o mesmo produto não entra duas vezes -->
+    <entity name="App\Domain\Catalog\FavoriteProduct" table="operator_favorite_items">
+        <id name="favorites" association-key="true"/>
+        <id name="productId" column="product_id" type="product_id"/>
+
+        <field name="position" type="integer"/>
+
+        <many-to-one field="favorites" target-entity="App\Domain\Catalog\OperatorFavorites" inversed-by="items">
+            <join-column name="operator_favorites_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

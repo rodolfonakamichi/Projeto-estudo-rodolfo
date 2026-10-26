@@ -159,6 +159,13 @@ migration final.
 `recipes`: | id PK | product_id FK (`UNIQUE`) | yield_qty DECIMAL(10,3) DEFAULT 1 |
 `recipe_items`: | id PK | recipe_id FK | stock_id CHAR(26) FK → stocks | qty DECIMAL(10,3) | unit VARCHAR(10) |
 
+### `operator_favorites` / `operator_favorite_items` (atalhos do operador, M2.5)
+`operator_favorites`: | id PK | company_id | branch_id | user_id | created_at, updated_at | `UNIQUE (user_id, branch_id)` |
+`operator_favorite_items`: | operator_favorites_id FK | product_id FK | position INT | `PK (operator_favorites_id, product_id)` |
+
+> Uma lista por pessoa e filial (decisão 2026-10-26). "Recentes" e "mais
+> vendidos" não têm tabela: são calculados das comandas a partir do M3.
+
 ### `stations` (capability `kitchen`)
 | id | CHAR(26) PK | company_id | branch_id | name VARCHAR(60) (`COZINHA`,`BAR`) | is_active TINYINT(1) | created_at, updated_at | `UNIQUE (branch_id, name)` |
 
@@ -386,3 +393,4 @@ payments 1─0..1 cash_movements
 | 2026-10-26 | M2: cardápio por filial; sem `products.base_price_cents` — todo produto tem ≥1 variação, `product_variant_id` obrigatório em `command_items`/`order_items`; `stations`/`categories` com timestamps; FKs de ID por convenção (ADR-012). |
 | 2026-10-26 | M2.2: `modifier_groups` sem `is_required` (derivado de `min_select`), grupos por produto; nomes únicos por produto/grupo; `products` com `INDEX (branch_id, is_active)` e timestamps. |
 | 2026-10-26 | M2.4: `FULLTEXT ft_products_name (name)` criado; busca em modo booleano por prefixo de palavra (mín. 3 letras). |
+| 2026-10-26 | M2.5: `operator_favorites` + `operator_favorite_items` (favoritos por operador e filial); recentes/mais vendidos calculados (M3). |

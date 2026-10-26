@@ -17,6 +17,7 @@
 | `Product` | `ProductVariant[]`, `ModifierGroup[]` → `Modifier[]`, `Recipe` | Tem ≥1 variação ativa (o preço mora na variação); min/max dos grupos coerente. |
 | `Category` | — | Nome único por filial; arquivada não muda. |
 | `Station` | — | Nome único por filial; só com a capability `kitchen`. |
+| `OperatorFavorites` | `FavoriteProduct[]` | Uma lista por operador e filial; até 30, sem repetir, na ordem dele. |
 | `Location` | — | Código de QR único por empresa. |
 | `Command` | `CommandItem[]`, `Discount[]`, `BillSplit?` | Total = Σ itens − descontos; só fecha se saldo = 0; item não some, é cancelado. |
 | `Order` | `OrderItem[]` | Pertence a 1 comanda aberta; não pode ser enviado vazio. |
@@ -231,3 +232,4 @@ implementa a interface do Domain.
 | 2026-10-23 | Nota §5 reescrita para Doctrine Data Mapper (ADR-012). Agregado `Company` implementado no M1. |
 | 2026-10-23 | `Role` vira agregado próprio (permissões + limite de desconto). `User` guarda `UserRole[]` com filial opcional. |
 | 2026-10-26 | M2: `Product` sempre com ≥1 variação (sem preço próprio); `Station` como agregado; Catálogo referencia outros agregados por ID. |
+| 2026-10-26 | M2.5: agregado `OperatorFavorites`. |

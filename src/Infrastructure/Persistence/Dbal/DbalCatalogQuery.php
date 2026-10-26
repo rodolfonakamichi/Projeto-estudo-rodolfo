@@ -15,6 +15,7 @@ use App\Domain\Catalog\CategoryId;
 use App\Domain\Catalog\ProductId;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
+use App\Domain\Identity\UserId;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
@@ -103,6 +104,20 @@ final readonly class DbalCatalogQuery implements CatalogQuery
         );
 
         return $this->assemble($rows);
+    }
+
+    public function favorites(CompanyId $companyId, BranchId $branchId, UserId $userId): array
+    {
+        // a ordem das linhas é a do operador: o assemble() a preserva
+        return $this->assemble($this->db->fetchAllAssociative(<<<'SQL'
+            SELECT p.id, p.name, p.category_id, p.station_id, p.track_stock, p.is_active
+              FROM operator_favorites f
+              JOIN operator_favorite_items i ON i.operator_favorites_id = f.id
+              JOIN products p                ON p.id = i.product_id
+             WHERE f.company_id = :company AND f.branch_id = :branch AND f.user_id = :user
+               AND p.is_active = 1
+             ORDER BY i.position
+            SQL, ['company' => $companyId->toString(), 'branch' => $branchId->toString(), 'user' => $userId->toString()]));
     }
 
     /**
