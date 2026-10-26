@@ -52,6 +52,9 @@ services:
     App\Application\Catalog\CatalogQuery: '@App\Infrastructure\Persistence\Dbal\DbalCatalogQuery'
     App\Application\Attendance\AttendanceQuery: '@App\Infrastructure\Persistence\Dbal\DbalAttendanceQuery'
     App\Application\Attendance\Command\DisplayNumberSequence: '@App\Infrastructure\Persistence\Dbal\DbalDisplayNumberSequence'
+    # Outbox e auditoria (M3.3, doc 05)
+    App\Application\Shared\Event\OutboxRelay: '@App\Infrastructure\Persistence\Outbox\DbalOutboxRelay'
+    App\Application\Audit\AuditLog: '@App\Infrastructure\Persistence\Dbal\DbalAuditLog'
     # Multiempresa (M1.4): a Application só lê o contexto; quem entra nele é a
     # autenticação. ResetInterface → tag kernel.reset pelo autoconfigure.
     App\Application\Shared\Context\CompanyContextProvider: '@App\Infrastructure\Security\CompanyContextHolder'

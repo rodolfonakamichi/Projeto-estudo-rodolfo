@@ -11,6 +11,7 @@ final readonly class CommandCancelled implements DomainEvent
 {
     public function __construct(
         public string $commandId,
+        public int $displayNumber,
         public string $reason,
         public string $actorId,
         private \DateTimeImmutable $occurredAt,

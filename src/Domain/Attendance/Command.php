@@ -13,6 +13,7 @@ use App\Domain\Catalog\ProductSelection;
 use App\Domain\Identity\BranchId;
 use App\Domain\Identity\CompanyId;
 use App\Domain\Identity\UserId;
+use App\Domain\Shared\AggregateRoot;
 use App\Domain\Shared\DomainException;
 use App\Domain\Shared\Money;
 use App\Domain\Shared\NotFound;
@@ -37,7 +38,7 @@ use Doctrine\Common\Collections\Collection;
  * `UNIQUE (branch_id, open_table_ref)` o banco garante uma comanda aberta por
  * mesa mesmo se dois garçons abrirem ao mesmo tempo.
  */
-class Command implements Timestamped
+class Command implements AggregateRoot, Timestamped
 {
     use RecordsEvents;
 
@@ -100,7 +101,7 @@ class Command implements Timestamped
 
     // ── itens ───────────────────────────────────────────────────────────
 
-    public function addItem(CommandItemId $itemId, ProductSelection $selection, Quantity $quantity, ?string $notes, \DateTimeImmutable $now): CommandItem
+    public function addItem(CommandItemId $itemId, ProductSelection $selection, Quantity $quantity, ?string $notes, UserId $by, \DateTimeImmutable $now): CommandItem
     {
         if (!$this->status->isActive()) {
             throw new DomainException("A comanda #{$this->displayNumber} está {$this->status->value}: não aceita item.");
@@ -114,6 +115,7 @@ class Command implements Timestamped
 
         $this->record(new CommandItemAdded(
             $this->id->toString(),
+            $this->displayNumber,
             $itemId->toString(),
             $selection->productId->toString(),
             $selection->variantId->toString(),
@@ -126,13 +128,14 @@ class Command implements Timestamped
                 'priceDeltaCents' => $modifier->priceDelta->cents(),
             ], $selection->modifiers),
             $item->lineTotal()->cents(),
+            $by->toString(),
             $now,
         ));
 
         return $item;
     }
 
-    public function changeItemQuantity(CommandItemId $itemId, Quantity $quantity, \DateTimeImmutable $now): void
+    public function changeItemQuantity(CommandItemId $itemId, Quantity $quantity, UserId $by, \DateTimeImmutable $now): void
     {
         $this->assertOpen();
         $item = $this->item($itemId);
@@ -143,7 +146,7 @@ class Command implements Timestamped
 
         $item->changeQuantity($quantity);
         $this->recalculate();
-        $this->record(new CommandItemChanged($this->id->toString(), $itemId->toString(), $old, $quantity->value, $now));
+        $this->record(new CommandItemChanged($this->id->toString(), $this->displayNumber, $itemId->toString(), $item->displayName(), $old, $quantity->value, $by->toString(), $now));
     }
 
     public function cancelItem(CommandItemId $itemId, UserId $by, string $reason, \DateTimeImmutable $now): void
@@ -151,9 +154,10 @@ class Command implements Timestamped
         $this->assertOpen();
         $reason = self::assertReason($reason);
 
-        $this->item($itemId)->cancel($by, $reason, $now);
+        $item = $this->item($itemId);
+        $item->cancel($by, $reason, $now);
         $this->recalculate();
-        $this->record(new CommandItemCancelled($this->id->toString(), $itemId->toString(), $reason, $by->toString(), $now));
+        $this->record(new CommandItemCancelled($this->id->toString(), $this->displayNumber, $itemId->toString(), $item->displayName(), $item->quantity(), $reason, $by->toString(), $now));
     }
 
     public function item(CommandItemId $itemId): CommandItem
@@ -181,7 +185,7 @@ class Command implements Timestamped
         $this->status = CommandStatus::Cancelled;
         $this->closedAt = $now;
         $this->openTableRef = null;
-        $this->record(new CommandCancelled($this->id->toString(), $this->cancelReason, $by->toString(), $now));
+        $this->record(new CommandCancelled($this->id->toString(), $this->displayNumber, $this->cancelReason, $by->toString(), $now));
     }
 
     /** Só fecha paga e com saldo zero (doc 02, invariante 3). Pagamentos chegam no M5. */
