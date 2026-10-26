@@ -9,6 +9,8 @@
     <entity name="App\Domain\Catalog\Product" table="products">
         <indexes>
             <index name="idx_products_branch_active" columns="branch_id,is_active"/>
+            <!-- busca rápida por nome (M2.4): MATCH ... AGAINST em modo booleano, prefixo de palavra -->
+            <index name="ft_products_name" columns="name" flags="fulltext"/>
         </indexes>
 
         <id name="id" type="product_id"/>

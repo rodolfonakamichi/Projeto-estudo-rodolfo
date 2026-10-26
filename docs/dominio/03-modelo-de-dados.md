@@ -385,3 +385,4 @@ payments 1─0..1 cash_movements
 | 2026-10-23 | M1.3: tabela `devices` (aparelho pareado); `api_tokens` com prefixo `u_` e expiração deslizante. |
 | 2026-10-26 | M2: cardápio por filial; sem `products.base_price_cents` — todo produto tem ≥1 variação, `product_variant_id` obrigatório em `command_items`/`order_items`; `stations`/`categories` com timestamps; FKs de ID por convenção (ADR-012). |
 | 2026-10-26 | M2.2: `modifier_groups` sem `is_required` (derivado de `min_select`), grupos por produto; nomes únicos por produto/grupo; `products` com `INDEX (branch_id, is_active)` e timestamps. |
+| 2026-10-26 | M2.4: `FULLTEXT ft_products_name (name)` criado; busca em modo booleano por prefixo de palavra (mín. 3 letras). |
