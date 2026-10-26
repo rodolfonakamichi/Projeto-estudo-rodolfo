@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 §3: PK composta (item, modificador); nome e preço COPIADOS -->
+    <entity name="App\Domain\Attendance\CommandItemModifier" table="command_item_modifiers">
+        <id name="item" association-key="true"/>
+        <id name="modifierId" column="modifier_id" type="modifier_id"/>
+
+        <field name="name" column="modifier_name" length="80"/>
+        <field name="priceDelta" column="price_delta_cents" type="money"/>
+
+        <many-to-one field="item" target-entity="App\Domain\Attendance\CommandItem" inversed-by="modifiers">
+            <join-column name="command_item_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

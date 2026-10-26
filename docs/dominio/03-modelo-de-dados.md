@@ -207,10 +207,12 @@ migration final.
 | — | | `INDEX (branch_id, status)` — listar comandas abertas |
 | — | | `INDEX (company_id, bind_type, bind_ref)` — achar comanda da mesa |
 
-> Regra: para `bind_type = MESA`, no máximo **uma** comanda `OPEN` por
-> `bind_ref`. Garantido pela aplicação + índice parcial emulado (coluna
-> gerada `open_bind_key = IF(status='OPEN' AND bind_type='MESA', bind_ref, NULL)`
-> com `UNIQUE (branch_id, open_bind_key)`).
+> Regra: para `bind_type = MESA`, no máximo **uma** comanda ativa por mesa.
+> Implementado (M3.2) com a coluna **`open_table_ref`** = `bind_ref` enquanto a
+> comanda ocupa a mesa e `NULL` depois (cancelada/fechada) — mantida pelo
+> próprio agregado, sem coluna gerada — e `UNIQUE (branch_id, open_table_ref)`
+> (o MySQL aceita vários NULL). Caso de uso checa antes (mensagem amigável); o
+> UNIQUE pega a corrida (API → 409). Também há `created_at`/`updated_at`.
 
 ### `command_items`
 | Coluna | Tipo | Notas |
@@ -222,7 +224,9 @@ migration final.
 | product_id | CHAR(26) FK | |
 | product_variant_id | CHAR(26) FK | sempre preenchido (todo produto tem variação) |
 | product_name | VARCHAR(150) | **cópia** no momento do lançamento |
+| variant_name | VARCHAR(80) | **cópia** (M3.2): "Chopp" + "500ml" |
 | unit_price_cents | BIGINT | **cópia** (não muda se o cardápio mudar) |
+| station_id | CHAR(26) FK NULL | **cópia** da estação do produto (M3.2; o pedido usa no M3.5) |
 | quantity | INT | inteira no MVP (decisão 2026-10-26); fração/peso quando houver venda por kg |
 | modifiers_total_cents | BIGINT | soma dos deltas |
 | line_total_cents | BIGINT | `(unit_price + modifiers_total) * quantity` |
@@ -230,10 +234,12 @@ migration final.
 | status | VARCHAR(30) | ACTIVE, CANCELLED, PENDING_AUTHORIZATION |
 | cancelled_by | CHAR(26) NULL | |
 | cancel_reason | VARCHAR(255) NULL | |
+| cancelled_at | DATETIME(6) NULL | (M3.2) |
+| created_at, updated_at | DATETIME(6) | (M3.2) |
 | — | | `INDEX (command_id, status)` |
 
 ### `command_item_modifiers`
-| id PK | command_item_id FK | modifier_id CHAR(26) FK | modifier_name VARCHAR(80) (cópia) | price_delta_cents BIGINT (cópia) |
+| command_item_id FK | modifier_id CHAR(26) FK | modifier_name VARCHAR(80) (cópia) | price_delta_cents BIGINT (cópia) | `PK (command_item_id, modifier_id)` (M3.2: sem id próprio) |
 
 ### `discounts`
 | id | CHAR(26) PK | company_id | command_id FK | scope VARCHAR(10) (`ITEM`/`COMMAND`) | command_item_id CHAR(26) FK NULL | type VARCHAR(10) (`PERCENT`/`AMOUNT`) | value DECIMAL(10,2) | amount_cents BIGINT (valor calculado) | status VARCHAR(20) (`APPLIED`/`PENDING`/`REJECTED`) | requested_by CHAR(26) | authorized_by CHAR(26) NULL | reason VARCHAR(255) |
@@ -329,8 +335,11 @@ CREATE TABLE counters (
 ) ENGINE=InnoDB;
 ```
 
-No caso de uso, dentro da transação da abertura da comanda:
-`INSERT ... ON DUPLICATE KEY UPDATE value = value + 1` e lê o valor.
+No caso de uso, dentro da transação da abertura da comanda (M3.2,
+`DbalDisplayNumberSequence`): `INSERT ... VALUES (..., LAST_INSERT_ID(1)) ON
+DUPLICATE KEY UPDATE value = LAST_INSERT_ID(value + 1)` e `lastInsertId()` —
+a linha fica travada até o COMMIT e o valor é o desta conexão. `scope` =
+`command:<data operacional>`. A tabela fica **fora do ORM** (`schema_filter`).
 
 ---
 
@@ -398,3 +407,4 @@ payments 1─0..1 cash_movements
 | 2026-10-26 | M2.4: `FULLTEXT ft_products_name (name)` criado; busca em modo booleano por prefixo de palavra (mín. 3 letras). |
 | 2026-10-26 | M2.5: `operator_favorites` + `operator_favorite_items` (favoritos por operador e filial); recentes/mais vendidos calculados (M3). |
 | 2026-10-26 | M3.1: `locations` (sem `qr_code` por ora), rótulo único por filial. M3: `command_items.quantity` passa a ser INT (quantidade inteira no MVP). |
+| 2026-10-26 | M3.2: `commands` (uma comanda ativa por mesa via `open_table_ref` + UNIQUE, em vez de coluna gerada), `command_items` (+ `variant_name`, `station_id`, `cancelled_at`, timestamps; `quantity` INT), `command_item_modifiers` com PK composta, `counters` fora do ORM. |

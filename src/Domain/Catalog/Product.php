@@ -213,6 +213,62 @@ class Product implements Timestamped
         throw new NotFound("Grupo de modificadores não encontrado no produto \"{$this->name}\".");
     }
 
+    // ── venda ───────────────────────────────────────────────────────────
+
+    /**
+     * Valida a escolha do cliente e devolve o "retrato" com preços de agora:
+     * produto e variação ativos; cada modificador ativo e de um grupo deste
+     * produto, sem repetir; cada grupo dentro do seu mínimo/máximo (grupo
+     * obrigatório sem escolha = erro).
+     *
+     * @param list<ModifierId> $modifierIds
+     */
+    public function select(ProductVariantId $variantId, array $modifierIds): ProductSelection
+    {
+        if (!$this->active) {
+            throw new DomainException("O produto \"{$this->name}\" está inativo.");
+        }
+        $variant = $this->variant($variantId);
+        if (!$variant->isActive()) {
+            throw new DomainException("A variação \"{$variant->name()}\" de \"{$this->name}\" está inativa.");
+        }
+
+        $chosen = [];
+        foreach ($modifierIds as $modifierId) {
+            if (isset($chosen[$modifierId->toString()])) {
+                throw new DomainException('Modificador repetido na escolha.');
+            }
+            $chosen[$modifierId->toString()] = true;
+        }
+
+        $selected = [];
+        foreach ($this->modifierGroups as $group) {
+            $count = 0;
+            foreach ($group->modifiers() as $modifier) {
+                if (!isset($chosen[$modifier->id()->toString()])) {
+                    continue;
+                }
+                if (!$modifier->isActive()) {
+                    throw new DomainException("\"{$modifier->name()}\" está indisponível.");
+                }
+                unset($chosen[$modifier->id()->toString()]);
+                $selected[] = new SelectedModifier($modifier->id(), $modifier->name(), $modifier->priceDelta());
+                ++$count;
+            }
+
+            if ($count < $group->minSelect() || $count > $group->maxSelect()) {
+                $exactlyOne = 1 === $group->minSelect() && 1 === $group->maxSelect();
+                throw new DomainException($exactlyOne ? "Escolha uma opção em \"{$group->name()}\"." : "Em \"{$group->name()}\" escolha de {$group->minSelect()} a {$group->maxSelect()} opção(ões); vieram {$count}.");
+            }
+        }
+
+        if ([] !== $chosen) {
+            throw new NotFound("Modificador não encontrado no produto \"{$this->name}\".");
+        }
+
+        return new ProductSelection($this->id, $variant->id(), $this->name, $variant->name(), $variant->price(), $selected, $this->stationId);
+    }
+
     // ── leitura ─────────────────────────────────────────────────────────
 
     public function id(): ProductId

@@ -118,6 +118,37 @@ final class ProductTest extends TestCase
         $this->product('X-Burger')->changeModifierGroupLimits(ModifierGroupId::generate(), 0, 1);
     }
 
+    public function test_select_valida_a_escolha_e_copia_os_precos(): void
+    {
+        $burger = $this->product('X-Burger');
+        $doneness = $burger->addModifierGroup(ModifierGroupId::generate(), 'Ponto', 1, 1, $this->modifiers(['Ao ponto' => 0, 'Bem passado' => 0]));
+        $extras = $burger->addModifierGroup(ModifierGroupId::generate(), 'Adicionais', 0, 2, $this->modifiers(['Bacon' => 400, 'Ovo' => 300, 'Cheddar' => 350]));
+        $variantId = $burger->variants()[0]->id();
+        [$rare] = $doneness->modifiers();
+        [$bacon, $egg, $cheddar] = $extras->modifiers();
+
+        $selection = $burger->select($variantId, [$bacon->id(), $rare->id()]);
+        self::assertSame(2500, $selection->unitPrice->cents());
+        self::assertSame(400, $selection->modifiersTotal()->cents());
+        self::assertSame(['Ao ponto', 'Bacon'], array_map(static fn ($modifier): string => $modifier->name, $selection->modifiers));
+
+        foreach ([
+            'grupo obrigatório sem escolha' => [$bacon->id()],
+            'acima do máximo' => [$rare->id(), $bacon->id(), $egg->id(), $cheddar->id()],
+            'repetido' => [$rare->id(), $rare->id()],
+        ] as $case => $modifierIds) {
+            try {
+                $burger->select($variantId, $modifierIds);
+                self::fail("aceitou: {$case}");
+            } catch (DomainException) {
+            }
+        }
+
+        $burger->deactivateModifier($extras->id(), $bacon->id());
+        $this->expectException(DomainException::class);
+        $burger->select($variantId, [$rare->id(), $bacon->id()]);
+    }
+
     /** @param list<NewVariant>|null $variants */
     private function product(string $name, ?array $variants = null): Product
     {

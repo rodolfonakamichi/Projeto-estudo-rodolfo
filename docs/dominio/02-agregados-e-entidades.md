@@ -234,3 +234,4 @@ implementa a interface do Domain.
 | 2026-10-26 | M2: `Product` sempre com ≥1 variação (sem preço próprio); `Station` como agregado; Catálogo referencia outros agregados por ID. |
 | 2026-10-26 | M2.5: agregado `OperatorFavorites`. |
 | 2026-10-26 | M3.1: `Location` implementado (contexto Atendimento, `App\\Domain\\Attendance`). |
+| 2026-10-26 | M3.2: `Command` implementado (abrir, lançar/alterar/cancelar item, cancelar, `close()` com saldo zero); preço/modificadores validados por `Product::select()` (`ProductSelection`) e copiados; eventos registrados no agregado (`RecordsEvents`), gravados no outbox no M3.3. |

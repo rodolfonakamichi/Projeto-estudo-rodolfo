@@ -41,6 +41,12 @@ final readonly class Money
         return new self($this->cents - $other->cents, $this->currency);
     }
 
+    /** Multiplica por um inteiro (quantidade): sem float, sem arredondamento. */
+    public function times(int $factor): self
+    {
+        return new self($this->cents * $factor, $this->currency);
+    }
+
     public function equals(self $other): bool
     {
         return $this->cents === $other->cents

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- doc 03 §3: nome/preço/estação COPIADOS no lançamento. variant_name e station_id além do doc (decisão M3.2) -->
+    <entity name="App\Domain\Attendance\CommandItem" table="command_items">
+        <indexes>
+            <index name="idx_command_items_status" columns="command_id,status"/>
+        </indexes>
+
+        <id name="id" type="command_item_id"/>
+
+        <field name="companyId" column="company_id" type="company_id"/>
+        <field name="productId" column="product_id" type="product_id"/>
+        <field name="variantId" column="product_variant_id" type="product_variant_id"/>
+        <field name="productName" column="product_name" length="150"/>
+        <field name="variantName" column="variant_name" length="80"/>
+        <field name="unitPrice" column="unit_price_cents" type="money"/>
+        <field name="stationId" column="station_id" type="station_id" nullable="true"/>
+        <field name="quantity" type="integer"/>
+        <field name="modifiersTotal" column="modifiers_total_cents" type="money"/>
+        <field name="lineTotal" column="line_total_cents" type="money"/>
+        <field name="notes" length="255" nullable="true"/>
+        <field name="status" length="30" enum-type="App\Domain\Attendance\CommandItemStatus"/>
+        <field name="cancelledBy" column="cancelled_by" type="user_id" nullable="true"/>
+        <field name="cancelReason" column="cancel_reason" length="255" nullable="true"/>
+        <field name="cancelledAt" column="cancelled_at" type="datetime_immutable" nullable="true"/>
+        <field name="createdAt" column="created_at" type="datetime_immutable"/>
+        <field name="updatedAt" column="updated_at" type="datetime_immutable"/>
+
+        <many-to-one field="command" target-entity="App\Domain\Attendance\Command" inversed-by="items">
+            <join-column name="command_id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+        <one-to-many field="modifiers" target-entity="App\Domain\Attendance\CommandItemModifier" mapped-by="item">
+            <cascade><cascade-persist/></cascade>
+        </one-to-many>
+    </entity>
+</doctrine-mapping>
