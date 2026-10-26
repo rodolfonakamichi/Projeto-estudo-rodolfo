@@ -1,6 +1,6 @@
 # Progresso da implementação — ponto de retomada
 
-> Atualizado em 2026-10-26 (M1.5 implementado, aguardando revisão/commit). Este arquivo é o "save game": estado exato,
+> Atualizado em 2026-10-26 (M1.6 implementado, aguardando revisão/commit — fecha o M1). Este arquivo é o "save game": estado exato,
 > próximos passos e decisões aprendidas. Ler junto com `docs/dominio/07-roadmap-mvp.md`.
 > **Ao retomar: ler este arquivo primeiro**, depois `git switch symfony` e
 > `docker compose up -d`.
@@ -18,8 +18,8 @@
 - **`main`** = `c445eae` (M0 antigo, sem framework). `m1-identidade` = `f68f4f0`
   (migrations Phinx — descartadas, ficam só no histórico).
 - **Milestone atual:** **M1** sobre Symfony. M1.1 `adba7db`, M1.2 `091b3c2`.
-  M1.3 `7958884`. M1.4 `1e6a37a`. **M1.5 — autorização** implementado (não
-  commitado). Próximo: **M1.6 — seed demo**.
+  M1.3 `7958884`. M1.4 `1e6a37a`. M1.5 `551da3e`. **M1.6 — seed demo**
+  implementado (não commitado) — **fecha o M1**. Próximo: **M2 — Catálogo**.
 - **Método combinado (2026-10-23):** Claude escreve o código, explicando cada
   padrão, e para no fim de cada sub-passo para o usuário revisar e commitar.
 
@@ -33,6 +33,7 @@ docker compose exec php composer install
 docker compose exec php bin/console app:health     # PHP 8.3 / MySQL 8.4 / OK
 docker compose exec php composer check             # cs, phpstan, deptrac, container, phpunit
 curl localhost:8080/health                          # {"status":"ok"}
+docker compose exec php bin/console app:seed-demo   # empresa demo (senha demo1234, PIN 1234)
 ```
 
 Banco: `comandas` (dev) e `comandas_test` (testes). Volume novo cria os dois
@@ -127,7 +128,7 @@ aparelho); rotas públicas e CLI sem filtro, com `companyId` explícito nos repo
 | Testes: aceite "A não vê B mesmo forçando id" (find, DQL, JOIN, slug), cobertura do filtro, contexto via HTTP — 77 verdes | `tests/Integration/MultiCompany/`, `AuthFlowTest` |
 | ADR-004 revisada | `docs/dominio/00-decisoes-arquiteturais.md` |
 
-### M1.5 — autorização (não commitado)
+### M1.5 — autorização (commit `551da3e`)
 Decisão do usuário: aceite HTTP por um endpoint **"posso?"** (o `command.close`
 real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
 (única exceção: `$db`) — renomeado no projeto todo.
@@ -142,6 +143,13 @@ real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
 | `PairDeviceHandler` usa o `PermissionChecker` | `src/Application/Identity/Auth/` |
 | Testes: aceite WAITER 403 / CASHIER 204 em `command.close`, `hotel` = false — 83 verdes | `tests/Presentation/Http/Identity/`, `tests/Integration/Identity/` |
 
+### M1.6 — seed demo (não commitado)
+| Entrega | Onde |
+|---|---|
+| `app:seed-demo`: empresa `demo` (tables+kitchen, sem hotel), filial Matriz, 1 usuário por papel (`dono@`, `admin@`, `auditor@` na empresa toda; `gerente@`, `caixa@`, `garcom@`, `cozinha@`, `bar@`, `estoque@` na Matriz), senha `demo1234`, PIN `1234` para quem opera | `src/Presentation/Console/Demo/SeedDemoCommand.php` |
+| Despacha os casos de uso (não SQL) numa transação só; idempotente; recusa rodar em `prod` | idem |
+| Testes: 1 usuário por papel, `hotel` = false na demo, reexecução não duplica — 85 verdes | `tests/Presentation/Console/` |
+
 ---
 
 ## Próximos passos — M1 sobre Symfony
@@ -150,8 +158,10 @@ real só nasce no M3). Regra de estilo nova: **nomes de variável por extenso**
 2. ~~Autenticação~~ (M1.3).
 3. ~~Multiempresa~~ (M1.4).
 4. ~~Autorização~~ (M1.5).
-5. **M1.6 — Seed demo:** `app:seed-demo` (empresa + filial + 1 usuário por papel).
-6. **`counters`** (numeração diária de comanda) — fica para o M3, onde é usado.
+5. ~~Seed demo~~ (M1.6). **M1 concluído.**
+6. **M2 — Catálogo** (doc 07): `categories`, `products`, `product_variants`,
+   `modifier_groups`, `modifiers`, `stations`; CRUD API; busca `FULLTEXT`.
+7. **`counters`** (numeração diária de comanda) — fica para o M3, onde é usado.
 
 ---
 

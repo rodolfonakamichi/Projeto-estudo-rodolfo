@@ -329,3 +329,4 @@ autoatendimento pleno, API pública, marketplace de integrações.
 | 2026-10-23 | ADR-012: M0 refeito sobre Symfony 7.4 LTS; M1 com Symfony Security (token + Voters), filtro Doctrine para `company_id`; método de trabalho com Doctrine Migrations. |
 | 2026-10-26 | M1.4 entregue: `CompanyFilter` + `CompanyContextHolder` (Infrastructure, `ResetInterface`), porta `CompanyContextProvider` na Application. |
 | 2026-10-26 | M1.5 entregue: `PermissionChecker` + `PermissionVoter`, `CapabilityChecker`; aceite HTTP via `GET /api/me/permissions/{code}` (o `command.close` real nasce no M3). |
+| 2026-10-26 | M1.6 entregue: `app:seed-demo` (empresa `demo` com mesas+cozinha, filial Matriz, 1 usuário por papel, via casos de uso). **M1 concluído**; `counters` segue para o M3. |
